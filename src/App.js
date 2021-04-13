@@ -1,7 +1,12 @@
 import React, { Component } from 'react';
+import styles from './animated-image.module.scss'
 import './App.css';
 import axios from 'axios'
 import io from "socket.io-client";
+
+const backendUrl = 'https://survivor-backend2.herokuapp.com/';
+const URL = 'https://survivor-backend2.herokuapp.com/';
+const socket = io.connect(URL, { transport : ['websocket'] });
 
 class App extends Component {
   constructor( props ) {
@@ -20,9 +25,24 @@ class App extends Component {
       tribe1Challenge: [],
       tribe2Challenge: [],
       tribe3Challenge: [],
-      showResults: false
+      showResults: false,
+      tied: false,
+      wobble: 1
     };
     this.getData = this.getData.bind(this);
+    this.getPlayer = this.getPlayer.bind(this)
+    this.updateTribe = this.updateTribe.bind(this)
+    this.addLikeness = this.addLikeness.bind(this)
+    this.subtractLikeness = this.subtractLikeness.bind(this)
+    this.handleChange = this.handleChange.bind(this);
+    this.diceRoll = this.diceRoll.bind(this);
+    this.diceRollTie = this.diceRollTie.bind(this);
+    this.eventRoll = this.eventRoll.bind(this);
+    this.challengeRoll = this.challengeRoll.bind(this);
+    this.addStrength = this.addStrength.bind(this);
+    this.subtractStrength = this.subtractStrength.bind(this);
+    this.addWit = this.addWit.bind(this);
+    this.subtractWit = this.subtractWit.bind(this);
   }
 
   componentDidMount() {
@@ -30,22 +50,28 @@ class App extends Component {
   }
 
   getData() {
-    axios.get('https://survivor-backend2.herokuapp.com/').then((res) => {
+    axios.get(backendUrl).then((res) => {
       const response = res.data;
-      console.log(response)
       this.setState({response});
+      socket.on("FromAPI", data => {
+        console.log('From Api')
+        const response = data;
+        this.setState({response});
+      });
     });
   }
 
   getPlayer(player) {
-    axios.put('http://localhost:5000/getPlayer', {
+    axios.put(`${backendUrl}getPlayer`, {
         name: player
       })
-      .then(response => {
-        // socket.on('FromgetPlayerAPI', data => {
-        //   const playerResponse = data;
-        //   this.setState({playerResponse});
-        // });
+      .then(res => {
+        const playerResponse = res.data;
+        this.setState({playerResponse});
+        socket.on('FromgetPlayerAPI', data => {
+          const playerResponse = data;
+          this.setState({playerResponse});
+        });
       })
       .catch(error => {
         console.log(error);
@@ -54,106 +80,105 @@ class App extends Component {
 
   addLikeness(id, likeness) {
     let num = likeness + 1
-    axios.put('http://localhost:5000/updateCount', {
+    axios.put(`${backendUrl}updateCount`, {
         id: id,
         likeness: num
       })
       .then(response => {
         console.log(response);
+        this.getData();
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   subtractLikeness(id, likeness) {
     let num = likeness - 1
-    axios.put('http://localhost:5000/updateCount', {
+    axios.put(`${backendUrl}updateCount`, {
         id: id,
         likeness: num
       })
       .then(response => {
         console.log(response);
+        this.getData();
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   addStrength(id, strength) {
     let num = strength + 1
-    axios.put('http://localhost:5000/updateStrength', {
+    axios.put(`${backendUrl}updateStrength`, {
         id: id,
         strength: num
       })
       .then(response => {
+        this.getData();
         console.log(response);
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   subtractStrength(id, strength) {
     let num = strength - 1
-    axios.put('http://localhost:5000/updateStrength', {
+    axios.put(`${backendUrl}updateStrength`, {
         id: id,
         strength: num
       })
       .then(response => {
+        this.getData();
         console.log(response);
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   addWit(id, wit) {
     let num = wit + 1
-    axios.put('http://localhost:5000/updateWit', {
+    axios.put(`${backendUrl}updateWit`, {
         id: id,
         wit: num
       })
       .then(response => {
+        this.getData();
         console.log(response);
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   subtractWit(id, wit) {
     let num = wit - 1
-    axios.put('http://localhost:5000/updateWit', {
+    axios.put(`${backendUrl}updateWit`, {
         id: id,
         wit: num
       })
       .then(response => {
+        this.getData();
         console.log(response);
       })
       .catch(error => {
         console.log(error);
       });
-    this.getData();
   }
 
   updateTribe(event) {
-    axios.put('http://localhost:5000/updateTribe', {
+    axios.put(`${backendUrl}updateTribe`, {
         id: [parseInt(this.state.value.split(',')[1])],
         tribe: this.state.value.split(',')[0]
       })
       .then(response => {
-        console.log(response);
+        this.getData();
       })
       .catch(error => {
         console.log(error);
       });
-      this.getData();
     event.preventDefault();
   }
 
@@ -191,12 +216,16 @@ class App extends Component {
   }
 
   eventRoll(tribe) {
-    let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
-    this.getPlayer(tribeMember.name);
     this.setState({ showResults: false });
-    // for(let i = 0; i < tribe.length; i ++){
-    //   let d7RollValue = Math.floor(Math.random() * 7)
-    // }
+    setTimeout(() => {
+      console.log('hello')
+      let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
+      this.getPlayer(tribeMember.name);
+      this.setState({ showResults: true });
+    }, 500)
+    // let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
+    // this.getPlayer(tribeMember.name);
+    // this.setState({ showResults: true });
   }
 
   diceRollTie(lowestName) {
@@ -205,7 +234,7 @@ class App extends Component {
     for(let i = 0; i < lowestName.length; i ++){
       playerArray.push(lowestName[i].name)
     }
-    this.setState({ showResults: true });
+    this.setState({ tied: true });
     this.getPlayer(playerArray);
   }
 
@@ -550,8 +579,12 @@ class App extends Component {
     return (
       <div className="App">
       <h2>
-      Event Happeneds to: {playerEvent}{tribeEvent}
+        Event Happens to:
       { this.state.showResults ? <div>
+        {playerEvent}{tribeEvent}
+      </div> : null }
+      { this.state.tied ? <div>
+        {playerEvent}
         <button onClick={() => this.eventRoll(this.state.playerResponse)}>Draw Rocks</button>
       </div> : null }
       </h2>
@@ -570,13 +603,13 @@ class App extends Component {
             Tribe
             </th>
             <th>
-            Likeness
+            Influence
             </th>
             <th>
             Strength
             </th>
             <th>
-            Wit
+            Mental
             </th>
           </tr>
           </thead>
@@ -586,7 +619,9 @@ class App extends Component {
         </table>
         <div>
           <button onClick={() => this.diceRoll(tribe1)}>Tribal Roll</button>
-          <button onClick={() => this.eventRoll(tribe1)}>Event Roll</button>
+          <button
+          onClick={() => this.eventRoll(tribe1)}
+        >Event Roll</button>
         </div>
         <h2>Tribe 2</h2>
         <table>
@@ -602,7 +637,7 @@ class App extends Component {
             Tribe
             </th>
             <th>
-            Likeness
+            Influence
             </th>
             <th>
             Strength
@@ -634,7 +669,7 @@ class App extends Component {
             Tribe
             </th>
             <th>
-            Likeness
+            Influence
             </th>
             <th>
             Strength
@@ -666,7 +701,7 @@ class App extends Component {
             Tribe
             </th>
             <th>
-            Likeness
+            Influence
             </th>
             <th>
             Strength
@@ -695,7 +730,7 @@ class App extends Component {
             Tribe
             </th>
             <th>
-            Likeness
+            Influence
             </th>
           </tr>
           </thead>
