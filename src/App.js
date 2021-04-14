@@ -47,6 +47,7 @@ class App extends Component {
 
   componentDidMount() {
     this.getData();
+    this.getPlayer('Jack Shephard');
   }
 
   getData() {
@@ -68,7 +69,9 @@ class App extends Component {
       .then(res => {
         const playerResponse = res.data;
         this.setState({playerResponse});
+        this.setState({showResults: true})
         socket.on('FromgetPlayerAPI', data => {
+          console.log('FromgetPlayerAPI')
           const playerResponse = data;
           this.setState({playerResponse});
         });
@@ -187,38 +190,42 @@ class App extends Component {
   }
 
   diceRoll(tribe){
-    let smallestValue = 0
-    let lowestName = []
-    for(let i = 0; i < tribe.length; i++){
-      let diceRoll = tribe[i].likeness * 9
-      let rollValue = Math.floor(Math.random() * diceRoll)
-      if(tribe[i] === tribe[0]){
-        smallestValue = rollValue
-        lowestName = [tribe[i]]
-      }
-      else if(smallestValue > rollValue) {
-        smallestValue = rollValue
-        lowestName = [tribe[i]]
-      }
-      else if(smallestValue === rollValue) {
-        smallestValue += rollValue
-        lowestName.push(tribe[i])
-      } else {
+    this.setState({ showResults: false });
+    setTimeout(() => {
+      let smallestValue = 0
+      let lowestName = []
+      for(let i = 0; i < tribe.length; i++){
+        let diceRoll = tribe[i].likeness * 9
+        let rollValue = Math.floor(Math.random() * diceRoll)
+        if(tribe[i] === tribe[0]){
+          smallestValue = rollValue
+          lowestName = [tribe[i]]
+        }
+        else if(smallestValue > rollValue) {
+          smallestValue = rollValue
+          lowestName = [tribe[i]]
+        }
+        else if(smallestValue === rollValue) {
+          smallestValue += rollValue
+          lowestName.push(tribe[i])
+        } else {
 
+        }
+        console.log(tribe[i].name, rollValue)
       }
-      console.log(tribe[i].name, rollValue)
-    }
-    if(lowestName.length > 1){
-      this.diceRollTie(lowestName)
-    } else {
-      this.getPlayer(lowestName[0].name);
-    }
+      if(lowestName.length > 1){
+        this.diceRollTie(lowestName)
+      } else {
+        this.getPlayer(lowestName[0].name);
+      }
+      this.setState({ showResults: true });
+    }, 500)
+
   }
 
   eventRoll(tribe) {
     this.setState({ showResults: false });
     setTimeout(() => {
-      console.log('hello')
       let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
       this.getPlayer(tribeMember.name);
       this.setState({ showResults: true });
@@ -238,7 +245,7 @@ class App extends Component {
     this.getPlayer(playerArray);
   }
 
-  challengeRoll(tribe1, tribe2, tribe3) {
+  challengeRoll(tribe1, tribe2, tribe3, challengeType) {
     let tribes = [this.state.tribe1Challenge, this.state.tribe2Challenge, this.state.tribe3Challenge]
     let tribe1Roll = 0
     let tribe2Roll = 0
@@ -250,14 +257,38 @@ class App extends Component {
       let tribeArray = tribes[i]
         for(let j = 0; j < tribeArray.length; j ++){
           if(tribeArray[j].tribe === 'tribe1'){
-          let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
-          tribe1Roll = tribe1Roll + rollValue
+            if(challengeType === 'both'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
+              tribe1Roll = tribe1Roll + rollValue
+            } else if(challengeType === 'physical'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength)
+              tribe1Roll = tribe1Roll + rollValue
+            } else {
+              let rollValue = Math.floor(Math.random() *  tribeArray[j].wit)
+              tribe1Roll = tribe1Roll + rollValue
+            }
         } else if(tribeArray[j].tribe === 'tribe2'){
-          let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
-          tribe2Roll = tribe2Roll + rollValue
+            if(challengeType === 'both'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
+              tribe2Roll = tribe2Roll + rollValue
+            } else if(challengeType === 'physical'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength)
+              tribe2Roll = tribe2Roll + rollValue
+            } else {
+              let rollValue = Math.floor(Math.random() * tribeArray[j].wit)
+              tribe2Roll = tribe2Roll + rollValue
+            }
         } else {
-          let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
-          tribe3Roll = tribe3Roll + rollValue
+            if(challengeType === 'both'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength + tribeArray[j].wit)
+              tribe3Roll = tribe3Roll + rollValue
+            } else if(challengeType === 'physical'){
+              let rollValue = Math.floor(Math.random() * tribeArray[j].strength)
+              tribe3Roll = tribe3Roll + rollValue
+            } else {
+              let rollValue = Math.floor(Math.random() *  tribeArray[j].wit)
+              tribe3Roll = tribe3Roll + rollValue
+            }
         }
       }
     }
@@ -268,7 +299,7 @@ class App extends Component {
       if(rollValueArray[i] === 0){
         continue;
       }
-      else if(rollValueArray[i] === rollValueArray[0]){
+      else if(lowestName.length === 0){
         smallestValue = rollValueArray[i]
         lowestName = [tribes[i]]
       }
@@ -283,15 +314,22 @@ class App extends Component {
 
       }
     }
-    console.log(lowestName)
-    this.setState({ tribeRespone: [lowestName[0][0]] });
-    console.log(tribe1Roll, tribe2Roll, tribe3Roll)
+    if(lowestName.length!= 0){
+      if(lowestName.length > 1){
+        console.log('theres been a tie');
+        this.challengeRoll(tribe1, tribe2, tribe3, challengeType)
+      } else {
+        this.setState({ tribeRespone: [lowestName[0][0]] });
+        this.setState({ showResults: true })
+      }
+    } else {
+      alert('add players to challenge');
+    }
   }
 
   handleInputChange(data, event) {
     const target = event.target;
     const value = target.type === 'checkbox' ? target.checked : target.value;
-    console.log(value);
     if(data.tribe === 'tribe1'){
       if(value === true){
         this.setState({ tribe1Challenge: [...this.state.tribe1Challenge, data] }, () => {
@@ -337,6 +375,8 @@ class App extends Component {
     let tribe3 = []
     let none = []
     let jury = []
+    let selectOptions = ['both', 'physical', 'mental']
+    let selected = []
 
     const tribeSort = this.state.response.map((data, i) => {
         if(data.tribe === 'jury'){
@@ -354,6 +394,13 @@ class App extends Component {
         else {
           none.push(data)
         }
+    })
+    const options = selectOptions.map((data, i) => {
+      return(
+        <div>
+      <button onClick={() => this.challengeRoll(tribe1, tribe2, tribe3, data)}>Challenge Roll {data}</button>
+        </div>
+      )
     })
     const tribe1Array = tribe1.map((data, i) => {
       let tribe1Selected = []
@@ -588,7 +635,7 @@ class App extends Component {
         <button onClick={() => this.eventRoll(this.state.playerResponse)}>Draw Rocks</button>
       </div> : null }
       </h2>
-          <button onClick={() => this.challengeRoll(tribe1, tribe2, tribe3)}>Challenge Roll</button>
+      {options}
         <h2>Tribe 1</h2>
         <table>
           <thead>
