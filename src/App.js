@@ -6,6 +6,8 @@ import io from "socket.io-client";
 
 const backendUrl = 'https://survivor-backend2.herokuapp.com/';
 const URL = 'https://survivor-backend2.herokuapp.com/';
+// const backendUrl = 'http://localhost:5000/';
+// const URL = 'http://localhost:5000/';
 const socket = io.connect(URL, { transport : ['websocket'] });
 
 class App extends Component {
@@ -25,6 +27,8 @@ class App extends Component {
       tribe1Challenge: [],
       tribe2Challenge: [],
       tribe3Challenge: [],
+      challengeResponse: [],
+      chkbox: false,
       showResults: false,
       tied: false,
       wobble: 1
@@ -43,11 +47,14 @@ class App extends Component {
     this.subtractStrength = this.subtractStrength.bind(this);
     this.addWit = this.addWit.bind(this);
     this.subtractWit = this.subtractWit.bind(this);
+    this.updateChallenge = this.updateChallenge.bind(this);
+    this.getTribe = this.getTribe.bind(this);
   }
 
   componentDidMount() {
     this.getData();
-    this.getPlayer('Jack Shephard');
+    this.getPlayer('John Locke');
+    this.getTribe('tribe1')
   }
 
   getData() {
@@ -55,7 +62,7 @@ class App extends Component {
       const response = res.data;
       this.setState({response});
       socket.on("FromAPI", data => {
-        console.log('From Api')
+        // console.log('From Api')
         const response = data;
         this.setState({response});
       });
@@ -63,22 +70,46 @@ class App extends Component {
   }
 
   getPlayer(player) {
-    axios.put(`${backendUrl}getPlayer`, {
-        name: player
-      })
-      .then(res => {
-        const playerResponse = res.data;
-        this.setState({playerResponse});
-        this.setState({showResults: true})
-        socket.on('FromgetPlayerAPI', data => {
-          console.log('FromgetPlayerAPI')
-          const playerResponse = data;
+    if(player === ''){
+      const playerResponse = [player]
+      this.setState({playerResponse});
+    } else {
+      axios.put(`${backendUrl}getPlayer`, {
+          name: player
+        })
+        .then(res => {
+          const playerResponse = res.data;
           this.setState({playerResponse});
+          this.setState({showResults: true})
+          socket.on('FromgetPlayerAPI', data => {
+            // console.log('FromgetPlayerAPI')
+            const playerResponse = data;
+            this.setState({playerResponse});
+          });
+        })
+        .catch(error => {
+          console.log(error);
         });
-      })
-      .catch(error => {
-        console.log(error);
-      });
+    }
+  }
+
+  getTribe(tribe) {
+      axios.put(`${backendUrl}getTribe`, {
+          tribe: tribe
+        })
+        .then(res => {
+          const challengeResponse = res.data;
+          this.setState({challengeResponse});
+          this.setState({showResults: true})
+          socket.on('FromgetTribeAPI', data => {
+            // console.log('FromgetTribeAPI', data[0])
+            const challengeResponse = data;
+            this.setState({challengeResponse});
+          });
+        })
+        .catch(error => {
+          console.log(error);
+        });
   }
 
   addLikeness(id, likeness) {
@@ -245,8 +276,24 @@ class App extends Component {
     this.getPlayer(playerArray);
   }
 
-  challengeRoll(tribe1, tribe2, tribe3, challengeType) {
-    let tribes = [this.state.tribe1Challenge, this.state.tribe2Challenge, this.state.tribe3Challenge]
+  challengeRoll(tribes1, tribes2, tribes3, challengeType) {
+    this.setState({ showResults: false });
+    setTimeout(() => {
+    let tribe1 = []
+    let tribe2 = []
+    let tribe3 = []
+    for(let i = 0; i < this.state.response.length; i ++){
+      if(this.state.response[i].tribe === 'tribe1' && this.state.response[i].join_game === true){
+          tribe1.push(this.state.response[i])
+      } else if(this.state.response[i].tribe === 'tribe2' && this.state.response[i].join_game === true){
+        tribe2.push(this.state.response[i])
+      } else if(this.state.response[i].tribe === 'tribe3' && this.state.response[i].join_game === true) {
+        tribe3.push(this.state.response[i])
+      } else {
+        console.log('hello world');
+      }
+    }
+    let tribes = [tribe1, tribe2, tribe3]
     let tribe1Roll = 0
     let tribe2Roll = 0
     let tribe3Roll = 0
@@ -314,17 +361,32 @@ class App extends Component {
 
       }
     }
-    if(lowestName.length!= 0){
+    if(lowestName.length!== 0){
       if(lowestName.length > 1){
         console.log('theres been a tie');
         this.challengeRoll(tribe1, tribe2, tribe3, challengeType)
       } else {
+        this.getTribe(lowestName[0][0].tribe)
         this.setState({ tribeRespone: [lowestName[0][0]] });
         this.setState({ showResults: true })
       }
     } else {
       alert('add players to challenge');
     }
+    }, 500)
+  }
+
+  updateChallenge(id, challenge) {
+    axios.put(`${backendUrl}updateChallenge`, {
+        id: id,
+        challenge: challenge
+      })
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
   }
 
   handleInputChange(data, event) {
@@ -332,39 +394,33 @@ class App extends Component {
     const value = target.type === 'checkbox' ? target.checked : target.value;
     if(data.tribe === 'tribe1'){
       if(value === true){
-        this.setState({ tribe1Challenge: [...this.state.tribe1Challenge, data] }, () => {
-        })
+        let id = data.id
+        let challenge = true
+        this.updateChallenge(id, challenge)
       } else {
-        let array = [...this.state.tribe1Challenge]
-        let index = array.indexOf(data)
-        if (index !== -1) {
-          array.splice(index, 1);
-          this.setState({tribe1Challenge: array});
-        }
+        let id = data.id
+        let challenge = false
+        this.updateChallenge(id, challenge)
       }
     } else if (data.tribe === 'tribe2'){
       if(value === true){
-        this.setState({ tribe2Challenge: [...this.state.tribe2Challenge, data] }, () => {
-        })
+        let id = data.id
+        let challenge = true
+        this.updateChallenge(id, challenge)
       } else {
-        let array = [...this.state.tribe2Challenge]
-        let index = array.indexOf(data)
-        if (index !== -1) {
-          array.splice(index, 1);
-          this.setState({tribe2Challenge: array});
-        }
+        let id = data.id
+        let challenge = false
+        this.updateChallenge(id, challenge)
       }
     } else {
       if(value === true){
-        this.setState({ tribe3Challenge: [...this.state.tribe3Challenge, data] }, () => {
-        })
+        let id = data.id
+        let challenge = true
+        this.updateChallenge(id, challenge)
       } else {
-        let array = [...this.state.tribe3Challenge]
-        let index = array.indexOf(data)
-        if (index !== -1) {
-          array.splice(index, 1);
-          this.setState({tribe3Challenge: array});
-        }
+        let id = data.id
+        let challenge = false
+        this.updateChallenge(id, challenge)
       }
     }
   }
@@ -410,6 +466,7 @@ class App extends Component {
           <input
             name="isGoing"
             type="checkbox"
+            defaultChecked={data.join_game}
             onChange={ (event) => {this.handleInputChange(data, event)}}
              />
           </td>
@@ -444,6 +501,9 @@ class App extends Component {
             <button onClick={() => this.addWit(data.id, data.wit)}>+</button>
             <button onClick={() => this.subtractWit(data.id, data.wit)}>-</button>
           </div>
+          </td>
+          <td>
+          {data.join_game.toString()}
           </td>
         </tr>
       )
@@ -455,6 +515,7 @@ class App extends Component {
           <input
             name="isGoing"
             type="checkbox"
+            defaultChecked={data.join_game}
             onChange={ (event) => {this.handleInputChange(data, event)}}
              />
           </td>
@@ -490,6 +551,9 @@ class App extends Component {
             <button onClick={() => this.subtractWit(data.id, data.wit)}>-</button>
           </div>
           </td>
+          <td>
+          {data.join_game.toString()}
+          </td>
         </tr>
       )
     })
@@ -500,6 +564,7 @@ class App extends Component {
           <input
             name="isGoing"
             type="checkbox"
+            defaultChecked={data.join_game}
             onChange={ (event) => {this.handleInputChange(data, event)}}
              />
           </td>
@@ -534,6 +599,9 @@ class App extends Component {
             <button onClick={() => this.addWit(data.id, data.wit)}>+</button>
             <button onClick={() => this.subtractWit(data.id, data.wit)}>-</button>
           </div>
+          </td>
+          <td>
+          {data.join_game.toString()}
           </td>
         </tr>
       )
@@ -609,7 +677,7 @@ class App extends Component {
       )
     })
     const playerEvent = this.state.playerResponse.map((data, i) => {
-      console.log(data.name)
+      // console.log(data.name)
       return(
         <div key={data.id}>
         {data.name}
@@ -623,12 +691,19 @@ class App extends Component {
         </div>
       )
     })
+    const challengeEvent = this.state.challengeResponse.map((data, i) => {
+      return(
+        <div key={data.id}>
+        {data.tribe}
+        </div>
+      )
+    })
     return (
       <div className="App">
       <h2>
         Event Happens to:
       { this.state.showResults ? <div>
-        {playerEvent}{tribeEvent}
+        {playerEvent}{challengeEvent[0]}
       </div> : null }
       { this.state.tied ? <div>
         {playerEvent}
@@ -657,6 +732,9 @@ class App extends Component {
             </th>
             <th>
             Mental
+            </th>
+            <th>
+            Join game
             </th>
           </tr>
           </thead>
@@ -692,6 +770,9 @@ class App extends Component {
             <th>
             Wit
             </th>
+            <th>
+            Join game
+            </th>
           </tr>
           </thead>
           <tbody>
@@ -723,6 +804,9 @@ class App extends Component {
             </th>
             <th>
             Wit
+            </th>
+            <th>
+            Join game
             </th>
           </tr>
           </thead>
