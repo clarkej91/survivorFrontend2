@@ -79,7 +79,6 @@ class App extends Component {
         id: id
       })
       .then(res => {
-        console.log(res.data)
         const eventRespone = res.data;
         this.setState({eventRespone})
         socket.on('FromGetEvent', data => {
@@ -401,7 +400,7 @@ class App extends Component {
 
   eventOutcomeRoll() {
     setTimeout(() => {
-      let randomNum = Math.floor(Math.random() * 26);
+      let randomNum = Math.floor(1 + Math.random() * 26);
       this.setState({ showEventResults: true });
       this.getEvent(randomNum)
     }, 500)
