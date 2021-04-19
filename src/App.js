@@ -24,12 +24,14 @@ class App extends Component {
       name: "",
       playerResponse: [],
       tribeRespone: [],
+      eventRespone: [],
       tribe1Challenge: [],
       tribe2Challenge: [],
       tribe3Challenge: [],
       challengeResponse: [],
       chkbox: false,
       showResults: false,
+      showEventResults: false,
       tied: false,
       wobble: 1
     };
@@ -49,12 +51,15 @@ class App extends Component {
     this.subtractWit = this.subtractWit.bind(this);
     this.updateChallenge = this.updateChallenge.bind(this);
     this.getTribe = this.getTribe.bind(this);
+    this.getData = this.getData.bind(this);
+    this.eventOutcomeRoll = this.eventOutcomeRoll.bind(this);
   }
 
   componentDidMount() {
     this.getData();
     this.getPlayer('John Locke');
-    this.getTribe('tribe1')
+    this.getTribe('tribe1');
+    this.getEvent(1)
   }
 
   getData() {
@@ -67,6 +72,24 @@ class App extends Component {
         this.setState({response});
       });
     });
+  }
+
+  getEvent(id) {
+    axios.put(`${backendUrl}getEvent`, {
+        id: id
+      })
+      .then(res => {
+        console.log(res.data)
+        const eventRespone = res.data;
+        this.setState({eventRespone})
+        socket.on('FromGetEvent', data => {
+          const eventRespone = data;
+          this.setState({eventRespone});
+        });
+      })
+      .catch(error => {
+        console.log(error);
+      });
   }
 
   getPlayer(player) {
@@ -376,6 +399,14 @@ class App extends Component {
     }, 500)
   }
 
+  eventOutcomeRoll() {
+    setTimeout(() => {
+      let randomNum = Math.floor(Math.random() * 26);
+      this.setState({ showEventResults: true });
+      this.getEvent(randomNum)
+    }, 500)
+  }
+
   updateChallenge(id, challenge) {
     axios.put(`${backendUrl}updateChallenge`, {
         id: id,
@@ -676,6 +707,13 @@ class App extends Component {
         </tr>
       )
     })
+    const eventOutcome = this.state.eventRespone.map((data, i) => {
+      return(
+        <div key={data.id}>
+        {data.events}
+        </div>
+      )
+    })
     const playerEvent = this.state.playerResponse.map((data, i) => {
       // console.log(data.name)
       return(
@@ -703,13 +741,18 @@ class App extends Component {
       <h2>
         Event Happens to:
       { this.state.showResults ? <div>
-        {playerEvent}{challengeEvent[0]}
+        {playerEvent}
+        {challengeEvent[0]} losses
       </div> : null }
       { this.state.tied ? <div>
         {playerEvent}
         <button onClick={() => this.eventRoll(this.state.playerResponse)}>Draw Rocks</button>
       </div> : null }
       </h2>
+      { this.state.showEventResults ? <div>
+        <h2>{eventOutcome}</h2>
+      </div> : null }
+        <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
       {options}
         <h2>Tribe 1</h2>
         <table>
