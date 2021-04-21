@@ -43,7 +43,7 @@ class App extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.diceRoll = this.diceRoll.bind(this);
     this.diceRollTie = this.diceRollTie.bind(this);
-    this.eventRoll = this.eventRoll.bind(this);
+    this.playerRoll = this.playerRoll.bind(this);
     this.challengeRoll = this.challengeRoll.bind(this);
     this.addStrength = this.addStrength.bind(this);
     this.subtractStrength = this.subtractStrength.bind(this);
@@ -102,7 +102,7 @@ class App extends Component {
         .then(res => {
           const playerResponse = res.data;
           this.setState({playerResponse});
-          this.setState({showResults: true})
+          // this.setState({showResults: true})
           socket.on('FromgetPlayerAPI', data => {
             // console.log('FromgetPlayerAPI')
             const playerResponse = data;
@@ -122,7 +122,7 @@ class App extends Component {
         .then(res => {
           const challengeResponse = res.data;
           this.setState({challengeResponse});
-          this.setState({showResults: true})
+          // this.setState({showResults: true})
           socket.on('FromgetTribeAPI', data => {
             // console.log('FromgetTribeAPI', data[0])
             const challengeResponse = data;
@@ -141,7 +141,6 @@ class App extends Component {
         likeness: num
       })
       .then(response => {
-        console.log(response);
         this.getData();
       })
       .catch(error => {
@@ -156,7 +155,6 @@ class App extends Component {
         likeness: num
       })
       .then(response => {
-        console.log(response);
         this.getData();
       })
       .catch(error => {
@@ -248,7 +246,7 @@ class App extends Component {
       let smallestValue = 0
       let lowestName = []
       for(let i = 0; i < tribe.length; i++){
-        let diceRoll = tribe[i].likeness * 9
+        let diceRoll = tribe[i].likeness * tribe[i].likeness
         let rollValue = Math.floor(Math.random() * diceRoll)
         if(tribe[i] === tribe[0]){
           smallestValue = rollValue
@@ -276,8 +274,9 @@ class App extends Component {
 
   }
 
-  eventRoll(tribe) {
+  playerRoll(tribe) {
     this.setState({ showResults: false });
+    this.setState({ tied: false });
     setTimeout(() => {
       let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
       this.getPlayer(tribeMember.name);
@@ -741,11 +740,11 @@ class App extends Component {
         Event Happens to:
       { this.state.showResults ? <div>
         {playerEvent}
-        {challengeEvent[0]} losses
+        <div class="row">{challengeEvent[0]}loses</div>
       </div> : null }
       { this.state.tied ? <div>
         {playerEvent}
-        <button onClick={() => this.eventRoll(this.state.playerResponse)}>Draw Rocks</button>
+        <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
       </div> : null }
       </h2>
       { this.state.showEventResults ? <div>
@@ -787,9 +786,25 @@ class App extends Component {
         <div>
           <button onClick={() => this.diceRoll(tribe1)}>Tribal Roll</button>
           <button
-          onClick={() => this.eventRoll(tribe1)}
-        >Event Roll</button>
+          onClick={() => this.playerRoll(tribe1)}
+        >Player Roll</button>
         </div>
+        <h2>
+          Event Happens to:
+        { this.state.showResults ? <div>
+          {playerEvent}
+          <div class="row">{challengeEvent[0]}loses</div>
+        </div> : null }
+        { this.state.tied ? <div>
+          {playerEvent}
+          <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
+        </div> : null }
+        </h2>
+        { this.state.showEventResults ? <div>
+          <h2>{eventOutcome}</h2>
+        </div> : null }
+          <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
+        {options}
         <h2>Tribe 2</h2>
         <table>
           <thead>
@@ -823,8 +838,24 @@ class App extends Component {
         </table>
         <div>
           <button onClick={() => this.diceRoll(tribe2)}>Tribal Roll</button>
-          <button onClick={() => this.eventRoll(tribe2)}>Event Roll</button>
+          <button onClick={() => this.playerRoll(tribe2)}>Player Roll</button>
         </div>
+        <h2>
+          Event Happens to:
+        { this.state.showResults ? <div>
+          {playerEvent}
+          <div class="row">{challengeEvent[0]}loses</div>
+        </div> : null }
+        { this.state.tied ? <div>
+          {playerEvent}
+          <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
+        </div> : null }
+        </h2>
+        { this.state.showEventResults ? <div>
+          <h2>{eventOutcome}</h2>
+        </div> : null }
+          <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
+        {options}
         <h2>Tribe 3</h2>
         <table>
           <thead>
@@ -858,7 +889,7 @@ class App extends Component {
         </table>
         <div>
           <button onClick={() => this.diceRoll(tribe3)}>Tribal Roll</button>
-          <button onClick={() => this.eventRoll(tribe3)}>Event Roll</button>
+          <button onClick={() => this.playerRoll(tribe3)}>Player Roll</button>
         </div>
         <h2>Voted out</h2>
         <table>
@@ -890,7 +921,7 @@ class App extends Component {
         </table>
         <div>
           <button onClick={() => this.diceRoll(none)}>Tribal Roll</button>
-          <button onClick={() => this.eventRoll(none)}>Event Roll</button>
+          <button onClick={() => this.playerRoll(none)}>Player Roll</button>
         </div>
         <h2>Jury</h2>
         <table>
@@ -913,7 +944,7 @@ class App extends Component {
         </table>
         <div>
           <button onClick={() => this.diceRoll(jury)}>Tribal Roll</button>
-          <button onClick={() => this.eventRoll(jury)}>Event Roll</button>
+          <button onClick={() => this.playerRoll(jury)}>Player Roll</button>
         </div>
       </div>
     );
