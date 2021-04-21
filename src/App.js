@@ -124,7 +124,6 @@ class App extends Component {
           this.setState({challengeResponse});
           // this.setState({showResults: true})
           socket.on('FromgetTribeAPI', data => {
-            // console.log('FromgetTribeAPI', data[0])
             const challengeResponse = data;
             this.setState({challengeResponse});
           });
