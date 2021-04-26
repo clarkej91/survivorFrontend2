@@ -1,8 +1,13 @@
 import React, { Component } from 'react';
-import styles from './animated-image.module.scss'
 import './App.css';
 import axios from 'axios'
 import io from "socket.io-client";
+import ChallengeSlider from "./components/slider.js"
+import 'bootstrap/dist/css/bootstrap.min.css';
+import TheProgressBar from "./components/ProgressBar.js"
+import Tribal from "./components/Tribal.js"
+import Table from 'react-bootstrap/Table';
+import { StickyContainer, Sticky } from 'react-sticky';
 
 const backendUrl = 'https://survivor-backend2.herokuapp.com/';
 const URL = 'https://survivor-backend2.herokuapp.com/';
@@ -29,11 +34,26 @@ class App extends Component {
       tribe2Challenge: [],
       tribe3Challenge: [],
       challengeResponse: [],
+      challengePercentage: [{
+          mental: 0,
+          phyiscal: 0
+        }],
+      tribe1Score: '',
+      tribe2Score: '',
+      tribe3Score: '',
       chkbox: false,
-      showResults: false,
-      showEventResults: false,
+      showResults: true,
+      showEventResults: true,
       tied: false,
-      wobble: 1
+      wobble: 1,
+      roundData: 0,
+      challengeRatioNum: 50,
+      showChallengeData: false,
+      showChallengeResults: false,
+      showTribal: false,
+      showCampLife: false,
+      playerOutcome: [],
+      gameData: []
     };
     this.getData = this.getData.bind(this);
     this.getPlayer = this.getPlayer.bind(this)
@@ -53,13 +73,19 @@ class App extends Component {
     this.getTribe = this.getTribe.bind(this);
     this.getData = this.getData.bind(this);
     this.eventOutcomeRoll = this.eventOutcomeRoll.bind(this);
+    this.challengeRatio = this.challengeRatio.bind(this);
+    this.updateRound = this.updateRound.bind(this);
+    this.getRoundData = this.getRoundData.bind(this);
+    this.updatGameData = this.updatGameData.bind(this);
+    this.updatePlayerScore = this.updatePlayerScore.bind(this);
   }
 
   componentDidMount() {
     this.getData();
     this.getPlayer('John Locke');
     this.getTribe('tribe1');
-    this.getEvent(1)
+    this.getEvent(1);
+    this.getRoundData();
   }
 
   getData() {
@@ -131,6 +157,46 @@ class App extends Component {
         .catch(error => {
           console.log(error);
         });
+  }
+
+  getRoundData() {
+    axios.get(`${backendUrl}gameData`).then((res) => {
+      const roundData = res.data[0].round_data;
+      const gameData = res.data
+      this.setState({roundData});
+      this.setState({gameData});
+      socket.on('GameData', data => {
+        const roundData = data[0].round_data;
+        const gameData = data
+        this.setState({gameData});
+        this.setState({roundData}, () => {
+          if(this.state.roundData === 50){
+            this.setState({showChallengeData: true})
+            this.setState({showTribal: false})
+            this.setState({showCampLife: false})
+            this.setState({showEventResults: false})
+          } else if(this.state.roundData === 100){
+            this.setState({showEventResults: false})
+            this.setState({showTribal: true})
+            this.setState({showChallengeData: false})
+            this.setState({showCampLife: false})
+          } else if(this.state.roundData === 75){
+            this.setState({showCampLife: true})
+            this.setState({showTribal: false})
+            this.setState({showChallengeData: false})
+          } else if(this.state.roundData === 25){
+            this.setState({showCampLife: true})
+            this.setState({showTribal: false})
+            this.setState({showChallengeData: false})
+          } else {
+            this.setState({showTribal: false})
+            this.setState({showCampLife: false})
+            this.setState({showChallengeData: false})
+            this.setState({showChallengeResults: false });
+          }
+        });
+      });
+    });
   }
 
   addLikeness(id, likeness) {
@@ -221,6 +287,19 @@ class App extends Component {
       });
   }
 
+  updatePlayerScore(id, playerScore){
+    axios.put(`${backendUrl}updatePlayerScore`, {
+        id: id,
+        playerScore: playerScore
+      })
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
   updateTribe(event) {
     axios.put(`${backendUrl}updateTribe`, {
         id: [parseInt(this.state.value.split(',')[1])],
@@ -235,12 +314,28 @@ class App extends Component {
     event.preventDefault();
   }
 
+  updatGameData() {
+    axios.put(`${backendUrl}updateScoreData`, {
+        id: 1,
+        tribe1: this.state.tribe1Score,
+        tribe2: this.state.tribe2Score,
+        tribe3: this.state.tribe3Score
+      })
+      .then(response => {
+        this.getRoundData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
   handleChange(event) {
     this.setState({value: event.target.value});
   }
 
   diceRoll(tribe){
     this.setState({ showResults: false });
+    let players = []
     setTimeout(() => {
       let smallestValue = 0
       let lowestName = []
@@ -261,13 +356,24 @@ class App extends Component {
         } else {
 
         }
-        console.log(tribe[i].name, rollValue)
+
+        // (function(ind) {
+        //     setTimeout(function(){
+        //       console.log(tribe[i].name,tribe[i].id, rollValue);
+        //       this.updatePlayerScore(tribe[i].id, rollValue);
+        //     }, 5000 * (ind+1) );
+        // })(i);
+        // this.updatePlayerScore(tribe[i].id, rollValue);
+        players.push({name: tribe[i].name, value: rollValue})
       }
       if(lowestName.length > 1){
         this.diceRollTie(lowestName)
       } else {
         this.getPlayer(lowestName[0].name);
       }
+      this.setState({playerOutcome: players}, () => {
+        console.log(this.state.playerOutcome)
+      })
       this.setState({ showResults: true });
     }, 500)
 
@@ -396,12 +502,144 @@ class App extends Component {
     }, 500)
   }
 
-  eventOutcomeRoll() {
+  eventOutcomeRoll(tribe) {
     setTimeout(() => {
       let randomNum = Math.floor(1 + Math.random() * 26);
       this.setState({ showEventResults: true });
       this.getEvent(randomNum)
     }, 500)
+    this.playerRoll(tribe)
+  }
+
+  challengeRatio(val, event) {
+    event.preventDefault();
+    this.setState({ showResults: false });
+    this.setState({ challengeRatioNum: val})
+    setTimeout(() => {
+    let tribe1 = []
+    let tribe2 = []
+    let tribe3 = []
+    for(let i = 0; i < this.state.response.length; i ++){
+      if(this.state.response[i].tribe === 'tribe1' && this.state.response[i].join_game === true){
+          tribe1.push(this.state.response[i])
+      } else if(this.state.response[i].tribe === 'tribe2' && this.state.response[i].join_game === true){
+        tribe2.push(this.state.response[i])
+      } else if(this.state.response[i].tribe === 'tribe3' && this.state.response[i].join_game === true) {
+        tribe3.push(this.state.response[i])
+      } else {}
+    }
+    let tribes = [tribe1, tribe2, tribe3]
+    let tribe1Roll = 0
+    let tribe2Roll = 0
+    let tribe3Roll = 0
+    for(let i = 0; i < tribes.length; i ++){
+      if(tribes[i].length === 0){
+        continue;
+      }
+      let tribeArray = tribes[i]
+        for(let j = 0; j < tribeArray.length; j ++){
+          if(tribeArray[j].tribe === 'tribe1'){
+            let phyiscal = tribeArray[j].strength * (parseInt(val) * .01)
+            let mental = tribeArray[j].wit * (parseInt(100 - val) * .01)
+            let rollValue = Math.floor(1 + Math.random() * phyiscal + mental)
+            tribe1Roll = tribe1Roll + rollValue
+        } else if(tribeArray[j].tribe === 'tribe2'){
+            let phyiscal = tribeArray[j].strength * (parseInt(val) * .01)
+            let mental = tribeArray[j].wit * (parseInt(100 - val) * .01)
+            let rollValue = Math.floor(1 + Math.random() * phyiscal + mental)
+            tribe2Roll = tribe2Roll + rollValue
+        } else {
+            let phyiscal = tribeArray[j].strength * (parseInt(val) * .01)
+            let mental = tribeArray[j].wit * (parseInt(100 - val) * .01)
+            let rollValue = Math.floor(1 + Math.random() * phyiscal + mental)
+            tribe3Roll = tribe3Roll + rollValue
+        }
+      }
+    }
+    let rollValueArray = [tribe1Roll,tribe2Roll,tribe3Roll]
+    let smallestValue = 0
+    let lowestName = []
+    for(let i = 0; i < rollValueArray.length; i ++){
+      if(rollValueArray[i] === 0){
+        continue;
+      }
+      else if(lowestName.length === 0){
+        smallestValue = rollValueArray[i]
+        lowestName = [tribes[i]]
+      }
+      else if(smallestValue > rollValueArray[i]) {
+        smallestValue = rollValueArray[i]
+        lowestName = [tribes[i]]
+      }
+      else if(smallestValue === rollValueArray[i]) {
+        smallestValue += rollValueArray[i]
+        lowestName.push(tribes[i])
+      } else {}
+    }
+    if(lowestName.length!== 0){
+      if(lowestName.length > 1){
+        console.log('theres been a tie');
+        let tieBreaker = Math.floor(Math.random() * lowestName.length);
+        console.log(lowestName[tieBreaker]);
+      } else {
+        this.getTribe(lowestName[0][0].tribe)
+        this.setState({ tribeRespone: [lowestName[0][0]] });
+        this.setState({ showResults: true })
+      }
+    } else {
+      alert('add players to challenge');
+    }
+    this.setState({
+      tribe1Score: tribe1Roll
+    })
+    this.setState({
+      tribe2Score: tribe2Roll
+    })
+    this.setState({
+      tribe3Score: tribe3Roll
+    })
+    this.setState({ showChallengeResults: true });
+    this.updatGameData();
+    console.log(tribe1Roll, tribe2Roll, tribe3Roll)
+    // console.log(((parseInt(val)) * .01))
+    // console.log((20 * ((parseInt(val)) * .01)))
+    // let rollValue = Math.floor(1 + Math.random() * (20 * ((parseInt(val)) * .01)))
+    // console.log(rollValue);
+  }, 500)
+}
+
+  updateRound(round) {
+    if(round === 'Next'){
+      let num = this.state.roundData + 25
+      if(this.state.roundData === 100){
+        num = 0
+      }
+      axios.put(`${backendUrl}updateRoundData`, {
+          id: 1,
+          roundData: num
+        })
+        .then(response => {
+          this.getRoundData();
+        })
+        .catch(error => {
+          console.log(error);
+        });
+    } else {
+      let num = this.state.roundData - 25
+      if(this.state.roundData === 0){
+        num = 100
+      }
+      axios.put(`${backendUrl}updateRoundData`, {
+          id: 1,
+          roundData: num
+        })
+        .then(response => {
+          this.getRoundData();
+        })
+        .catch(error => {
+          console.log(error);
+        });
+    }
   }
 
   updateChallenge(id, challenge) {
@@ -461,6 +699,14 @@ class App extends Component {
     let jury = []
     let selectOptions = ['both', 'physical', 'mental']
     let selected = []
+    const tabeHeaer = [
+      {header: "Name"},
+      {header: "Tribe"},
+      {header: "Influence"},
+      {header: "Strength"},
+      {header: "Mental"},
+      {header: "Join game"}
+    ]
 
     const tribeSort = this.state.response.map((data, i) => {
         if(data.tribe === 'jury'){
@@ -490,22 +736,14 @@ class App extends Component {
       let tribe1Selected = []
       return(
         <tr key={data.id}>
-          <td>
-          <input
-            name="isGoing"
-            type="checkbox"
-            defaultChecked={data.join_game}
-            onChange={ (event) => {this.handleInputChange(data, event)}}
-             />
-          </td>
           <td>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
             defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
-          <option value={['tribe1', data.id]}>Tribe1</option>
-          <option value={['tribe2', data.id]}>Tribe2</option>
-          <option value={['tribe3', data.id]}>Tribe3</option>
+          <option value={['tribe1', data.id]}>LTDA</option>
+          <option value={['tribe2', data.id]}>Seekers</option>
+          <option value={['tribe3', data.id]}>Smoke Monsters</option>
           <option value={['none', data.id]}>Voted out</option>
           <option value={['jury', data.id]}>Jury</option>
           </select>
@@ -531,6 +769,12 @@ class App extends Component {
           </div>
           </td>
           <td>
+          <input
+            name="isGoing"
+            type="checkbox"
+            defaultChecked={data.join_game}
+            onChange={ (event) => {this.handleInputChange(data, event)}}
+             />
           {data.join_game.toString()}
           </td>
         </tr>
@@ -539,22 +783,14 @@ class App extends Component {
     const tribe2Array = tribe2.map((data, i) => {
       return(
         <tr key={data.id}>
-          <td>
-          <input
-            name="isGoing"
-            type="checkbox"
-            defaultChecked={data.join_game}
-            onChange={ (event) => {this.handleInputChange(data, event)}}
-             />
-          </td>
           <td>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
             defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
-          <option value={['tribe1', data.id]}>Tribe1</option>
-          <option value={['tribe2', data.id]}>Tribe2</option>
-          <option value={['tribe3', data.id]}>Tribe3</option>
+          <option value={['tribe1', data.id]}>LTDA</option>
+          <option value={['tribe2', data.id]}>Seekers</option>
+          <option value={['tribe3', data.id]}>Smoke Monster</option>
           <option value={['none', data.id]}>Voted out</option>
           <option value={['jury', data.id]}>Jury</option>
           </select>
@@ -580,6 +816,12 @@ class App extends Component {
           </div>
           </td>
           <td>
+          <input
+            name="isGoing"
+            type="checkbox"
+            defaultChecked={data.join_game}
+            onChange={ (event) => {this.handleInputChange(data, event)}}
+             />
           {data.join_game.toString()}
           </td>
         </tr>
@@ -588,22 +830,14 @@ class App extends Component {
     const tribe3Array = tribe3.map((data, i) => {
       return(
         <tr key={data.id}>
-          <td>
-          <input
-            name="isGoing"
-            type="checkbox"
-            defaultChecked={data.join_game}
-            onChange={ (event) => {this.handleInputChange(data, event)}}
-             />
-          </td>
           <td>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
             defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
-          <option value={['tribe1', data.id]}>Tribe1</option>
-          <option value={['tribe2', data.id]}>Tribe2</option>
-          <option value={['tribe3', data.id]}>Tribe3</option>
+          <option value={['tribe1', data.id]}>LTDA</option>
+          <option value={['tribe2', data.id]}>Seekers</option>
+          <option value={['tribe3', data.id]}>Smoke Monsters</option>
           <option value={['none', data.id]}>Voted out</option>
           <option value={['jury', data.id]}>Jury</option>
           </select>
@@ -629,6 +863,12 @@ class App extends Component {
           </div>
           </td>
           <td>
+          <input
+            name="isGoing"
+            type="checkbox"
+            defaultChecked={data.join_game}
+            onChange={ (event) => {this.handleInputChange(data, event)}}
+             />
           {data.join_game.toString()}
           </td>
         </tr>
@@ -637,21 +877,14 @@ class App extends Component {
     const noneArray = none.map((data, i) => {
       return(
         <tr key={data.id}>
-        <td>
-        <input
-          name="isGoing"
-          type="checkbox"
-          onChange={ (event) => {this.handleInputChange(data, event)}}
-           />
-        </td>
           <td>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
             defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
-          <option value={['tribe1', data.id]}>Tribe1</option>
-          <option value={['tribe2', data.id]}>Tribe2</option>
-          <option value={['tribe3', data.id]}>Tribe3</option>
+          <option value={['tribe1', data.id]}>LTDA</option>
+          <option value={['tribe2', data.id]}>Seekers</option>
+          <option value={['tribe3', data.id]}>Smoke Monsters</option>
           <option value={['none', data.id]}>Voted out</option>
           <option value={['jury', data.id]}>Jury</option>
           </select>
@@ -676,6 +909,13 @@ class App extends Component {
             <button onClick={() => this.subtractWit(data.id, data.wit)}>-</button>
           </div>
           </td>
+          <td>
+          <input
+            name="isGoing"
+            type="checkbox"
+            onChange={ (event) => {this.handleInputChange(data, event)}}
+             />
+          </td>
         </tr>
       )
     })
@@ -687,9 +927,9 @@ class App extends Component {
           <form onSubmit={this.updateTribe}>
           <select
             defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
-          <option value={['tribe1', data.id]}>Tribe1</option>
-          <option value={['tribe2', data.id]}>Tribe2</option>
-          <option value={['tribe3', data.id]}>Tribe3</option>
+          <option value={['tribe1', data.id]}>LTDA</option>
+          <option value={['tribe2', data.id]}>Seekers</option>
+          <option value={['tribe3', data.id]}>Smoke Monsters</option>
           <option value={['none', data.id]}>Voted out</option>
           <option value={['jury', data.id]}>Jury</option>
           </select>
@@ -735,216 +975,167 @@ class App extends Component {
     })
     return (
       <div className="App">
-      <h2>
-        Event Happens to:
-      { this.state.showResults ? <div>
-        {playerEvent}
-        <div class="row">{challengeEvent[0]}loses</div>
+      <StickyContainer>
+      <Sticky>
+        {({ style }) => <h4 style={{ ...style, backgroundColor: '#C9C9C9' }}>
+        <TheProgressBar
+          roundData={this.state.roundData}
+          updateRound={this.updateRound}/>
+          { this.state.showChallengeData ? <div>
+          <ChallengeSlider
+            challengeRatioNum={this.state.challengeRatioNum}
+            challengeRatio={this.challengeRatio}
+            gameData={this.state.gameData}
+            />
+          </div> : null }
+          <h2>
+          { this.state.showTribal ? <div>
+          <Tribal
+            response={this.state.response}
+            playerOutcome={this.state.playerOutcome}
+          />
+          </div> : null }
+            Event Happens to:
+          { this.state.showResults ? <div>
+            {playerEvent}
+          </div> : null }
+          { this.state.tied ? <div>
+            {playerEvent}
+            <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
+          </div> : null }
+          { this.state.showEventResults ? <div>
+            <h2>{eventOutcome}</h2>
+          </div> : null }
+          </h2>
+        </h4>}
+      </Sticky>
+      { this.state.showCampLife ? <div>
+      <button onClick={() => this.eventOutcomeRoll(tribe1)}>Event Outcome Roll</button>
       </div> : null }
-      { this.state.tied ? <div>
-        {playerEvent}
-        <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
+      { this.state.showTribal ? <div>
+      <button onClick={() => this.diceRoll(tribe1)}>Tribal Roll</button>
       </div> : null }
-      </h2>
-      { this.state.showEventResults ? <div>
-        <h2>{eventOutcome}</h2>
-      </div> : null }
-        <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
-      {options}
-        <h2>Tribe 1</h2>
-        <table>
+        <div>
+          <button
+          onClick={() => this.playerRoll(tribe1)}
+        >Player Roll</button>
+        </div>
+        <Table striped bordered hover size="sm">
           <thead>
           <tr>
-            <th>
-            []
-            </th>
-            <th>
-            Name
-            </th>
-            <th>
-            Tribe
-            </th>
-            <th>
-            Influence
-            </th>
-            <th>
-            Strength
-            </th>
-            <th>
-            Mental
-            </th>
-            <th>
-            Join game
-            </th>
+          <th colspan="6">
+          Live Together Die Alone Tribe
+          </th>
+          </tr>
+          <tr>
+          {tabeHeaer.map(data => {
+            return <th>{data.header}</th>;
+          })}
           </tr>
           </thead>
           <tbody>
           {tribe1Array}
           </tbody>
-        </table>
-        <div>
-          <button onClick={() => this.diceRoll(tribe1)}>Tribal Roll</button>
-          <button
-          onClick={() => this.playerRoll(tribe1)}
-        >Player Roll</button>
-        </div>
+        </Table>
         <h2>
-          Event Happens to:
-        { this.state.showResults ? <div>
-          {playerEvent}
-          <div class="row">{challengeEvent[0]}loses</div>
-        </div> : null }
         { this.state.tied ? <div>
           {playerEvent}
           <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
         </div> : null }
         </h2>
-        { this.state.showEventResults ? <div>
-          <h2>{eventOutcome}</h2>
+        { this.state.showCampLife ? <div>
+        <button onClick={() => this.eventOutcomeRoll(tribe2)}>Event Outcome Roll</button>
         </div> : null }
-          <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
-        {options}
-        <h2>Tribe 2</h2>
-        <table>
+        { this.state.showTribal ? <div>
+        <button onClick={() => this.diceRoll(tribe2)}>Tribal Roll</button>
+        </div> : null }
+          <div>
+            <button onClick={() => this.playerRoll(tribe2)}>Player Roll</button>
+          </div>
+        <Table striped bordered hover size="sm">
           <thead>
           <tr>
-            <th>
-            []
-            </th>
-            <th>
-            Name
-            </th>
-            <th>
-            Tribe
-            </th>
-            <th>
-            Influence
-            </th>
-            <th>
-            Strength
-            </th>
-            <th>
-            Wit
-            </th>
-            <th>
-            Join game
-            </th>
+          <th colspan="6">
+          The Seekers Tribe
+          </th>
+          </tr>
+          <tr>
+          {tabeHeaer.map(data => {
+            return <th>{data.header}</th>;
+          })}
           </tr>
           </thead>
           <tbody>
           {tribe2Array}
           </tbody>
-        </table>
-        <div>
-          <button onClick={() => this.diceRoll(tribe2)}>Tribal Roll</button>
-          <button onClick={() => this.playerRoll(tribe2)}>Player Roll</button>
-        </div>
+        </Table>
         <h2>
-          Event Happens to:
-        { this.state.showResults ? <div>
-          {playerEvent}
-          <div class="row">{challengeEvent[0]}loses</div>
-        </div> : null }
         { this.state.tied ? <div>
           {playerEvent}
           <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
         </div> : null }
         </h2>
-        { this.state.showEventResults ? <div>
-          <h2>{eventOutcome}</h2>
+        { this.state.showCampLife ? <div>
+        <button onClick={() => this.eventOutcomeRoll(tribe3)}>Event Outcome Roll</button>
         </div> : null }
-          <button onClick={() => this.eventOutcomeRoll()}>Event Outcome Roll</button>
-        {options}
-        <h2>Tribe 3</h2>
-        <table>
+        { this.state.showTribal ? <div>
+        <button onClick={() => this.diceRoll(tribe3)}>Tribal Roll</button>
+        </div> : null }
+          <div>
+            <button onClick={() => this.playerRoll(tribe3)}>Player Roll</button>
+          </div>
+        <Table striped bordered hover size="sm">
           <thead>
           <tr>
-            <th>
-            []
-            </th>
-            <th>
-            Name
-            </th>
-            <th>
-            Tribe
-            </th>
-            <th>
-            Influence
-            </th>
-            <th>
-            Strength
-            </th>
-            <th>
-            Wit
-            </th>
-            <th>
-            Join game
-            </th>
+          <th colspan="6">
+          The Smoke Monsters tribe
+          </th>
+          </tr>
+          <tr>
+          {tabeHeaer.map(data => {
+            return <th>{data.header}</th>;
+          })}
           </tr>
           </thead>
           <tbody>
           {tribe3Array}
           </tbody>
-        </table>
-        <div>
-          <button onClick={() => this.diceRoll(tribe3)}>Tribal Roll</button>
-          <button onClick={() => this.playerRoll(tribe3)}>Player Roll</button>
-        </div>
+        </Table>
         <h2>Voted out</h2>
-        <table>
+        <Table striped bordered hover size="sm">
           <thead>
           <tr>
-            <th>
-            []
-            </th>
-            <th>
-            Name
-            </th>
-            <th>
-            Tribe
-            </th>
-            <th>
-            Influence
-            </th>
-            <th>
-            Strength
-            </th>
-            <th>
-            Wit
-            </th>
+          {tabeHeaer.map(data => {
+            return <th>{data.header}</th>;
+          })}
           </tr>
           </thead>
           <tbody>
           {noneArray}
           </tbody>
-        </table>
+        </Table>
         <div>
           <button onClick={() => this.diceRoll(none)}>Tribal Roll</button>
           <button onClick={() => this.playerRoll(none)}>Player Roll</button>
         </div>
         <h2>Jury</h2>
-        <table>
+        <Table striped bordered hover size="sm">
           <thead>
           <tr>
-            <th>
-            Name
-            </th>
-            <th>
-            Tribe
-            </th>
-            <th>
-            Influence
-            </th>
+          {tabeHeaer.map(data => {
+            return <th>{data.header}</th>;
+          })}
           </tr>
           </thead>
           <tbody>
           {juryArray}
           </tbody>
-        </table>
+        </Table>
         <div>
           <button onClick={() => this.diceRoll(jury)}>Tribal Roll</button>
           <button onClick={() => this.playerRoll(jury)}>Player Roll</button>
         </div>
+      </StickyContainer>
       </div>
     );
   }
