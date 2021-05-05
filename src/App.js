@@ -52,6 +52,7 @@ class App extends Component {
       showChallengeResults: false,
       showTribal: false,
       showCampLife: false,
+      idolRoll: false,
       playerOutcome: [],
       gameData: []
     };
@@ -78,6 +79,8 @@ class App extends Component {
     this.getRoundData = this.getRoundData.bind(this);
     this.updatGameData = this.updatGameData.bind(this);
     this.updatePlayerScore = this.updatePlayerScore.bind(this);
+    this.idolRoll = this.idolRoll.bind(this);
+    this.handleIdolChange = this.handleIdolChange.bind(this);
   }
 
   componentDidMount() {
@@ -110,6 +113,12 @@ class App extends Component {
         socket.on('FromGetEvent', data => {
           const eventRespone = data;
           this.setState({eventRespone});
+          console.log(eventRespone[0].events);
+          if(eventRespone[0].events === 'Idol Roll'){
+            this.setState({idolRoll: true})
+          } else {
+            this.setState({idolRoll: false})
+          }
         });
       })
       .catch(error => {
@@ -176,6 +185,7 @@ class App extends Component {
             this.setState({showCampLife: false})
             this.setState({showEventResults: false})
           } else if(this.state.roundData === 100){
+            this.setState({idolRoll: false})
             this.setState({showEventResults: false})
             this.setState({showTribal: true})
             this.setState({showChallengeData: false})
@@ -339,7 +349,13 @@ class App extends Component {
     setTimeout(() => {
       let smallestValue = 0
       let lowestName = []
+      console.log(tribe);
+
       for(let i = 0; i < tribe.length; i++){
+        if(tribe[i].immunity === true){
+          this.updateIdolCount(tribe[i].id, tribe[i].idol_count - 1)
+          continue;
+        }
         let diceRoll = tribe[i].likeness * tribe[i].likeness
         let rollValue = Math.floor(Math.random() * diceRoll)
         if(tribe[i] === tribe[0]){
@@ -503,8 +519,9 @@ class App extends Component {
   }
 
   eventOutcomeRoll(tribe) {
+    this.setState({idolRoll: false})
     setTimeout(() => {
-      let randomNum = Math.floor(1 + Math.random() * 26);
+      let randomNum = Math.floor(1 + Math.random() * 48);
       this.setState({ showEventResults: true });
       this.getEvent(randomNum)
     }, 500)
@@ -655,6 +672,76 @@ class App extends Component {
       });
   }
 
+  updateIdolCount(id, idolCount){
+    axios.put(`${backendUrl}updateIdolCount`, {
+        id: id,
+        idolCount: idolCount
+      })
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
+  updateImmunity(id, immunity){
+    axios.put(`${backendUrl}updateImmunity`, {
+        id: id,
+        immunity: immunity
+      })
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
+  idolRoll(){
+    let randomNum = Math.floor(1 + Math.random() * 3);
+    console.log(randomNum)
+    if(randomNum === 3){
+      this.updateIdolCount(this.state.playerResponse[0].id, this.state.playerResponse[0].idol_count + 1)
+    }
+  }
+
+  handleIdolChange(data, event) {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    if(data.tribe === 'tribe1'){
+      if(value === true && data.idol_count > 0){
+        let id = data.id
+        let immunity = true
+        this.updateImmunity(id, immunity)
+      } else {
+        let id = data.id
+        let immunity = false
+        this.updateImmunity(id, immunity)
+      }
+    } else if (data.tribe === 'tribe2'){
+      if(value === true && data.idol_count > 0){
+        let id = data.id
+        let immunity = true
+        this.updateImmunity(id, immunity)
+      } else {
+        let id = data.id
+        let immunity = false
+        this.updateImmunity(id, immunity)
+      }
+    } else {
+      if(value === true && data.idol_count > 0){
+        let id = data.id
+        let immunity = true
+        this.updateImmunity(id, immunity)
+      } else {
+        let id = data.id
+        let immunity = false
+        this.updateImmunity(id, immunity)
+      }
+    }
+  }
+
   handleInputChange(data, event) {
     const target = event.target;
     const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -705,7 +792,9 @@ class App extends Component {
       {header: "Influence"},
       {header: "Strength"},
       {header: "Mental"},
-      {header: "Join game"}
+      {header: "Join game"},
+      {header: "Use Idol"},
+      {header: "Idol Count"},
     ]
 
     const tribeSort = this.state.response.map((data, i) => {
@@ -777,6 +866,18 @@ class App extends Component {
              />
           {data.join_game.toString()}
           </td>
+          <td>
+          <input
+            name="useIdol"
+            type="checkbox"
+            defaultChecked={data.immunity}
+            onChange={ (event) => {this.handleIdolChange(data, event)}}
+             />
+          {data.immunity.toString()}
+          </td>
+          <td>
+          {data.idol_count}
+          </td>
         </tr>
       )
     })
@@ -824,6 +925,18 @@ class App extends Component {
              />
           {data.join_game.toString()}
           </td>
+          <td>
+          <input
+            name="useIdol"
+            type="checkbox"
+            defaultChecked={data.immunity}
+            onChange={ (event) => {this.handleIdolChange(data, event)}}
+             />
+          {data.immunity.toString()}
+          </td>
+          <td>
+          {data.idol_count}
+          </td>
         </tr>
       )
     })
@@ -870,6 +983,18 @@ class App extends Component {
             onChange={ (event) => {this.handleInputChange(data, event)}}
              />
           {data.join_game.toString()}
+          </td>
+          <td>
+          <input
+            name="useIdol"
+            type="checkbox"
+            defaultChecked={data.immunity}
+            onChange={ (event) => {this.handleIdolChange(data, event)}}
+             />
+          {data.immunity.toString()}
+          </td>
+          <td>
+          {data.idol_count}
           </td>
         </tr>
       )
@@ -1009,6 +1134,9 @@ class App extends Component {
           </h2>
         </h4>}
       </Sticky>
+      { this.state.idolRoll ? <div>
+      <button onClick={() => this.idolRoll()}>Idol Roll</button>
+      </div> : null }
       { this.state.showCampLife ? <div>
       <button onClick={() => this.eventOutcomeRoll(tribe1)}>Event Outcome Roll</button>
       </div> : null }
@@ -1023,7 +1151,7 @@ class App extends Component {
         <Table striped bordered hover size="sm">
           <thead>
           <tr>
-          <th colspan="6">
+          <th colspan="8">
           Live Together Die Alone Tribe
           </th>
           </tr>
@@ -1043,6 +1171,9 @@ class App extends Component {
           <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
         </div> : null }
         </h2>
+        { this.state.idolRoll ? <div>
+        <button onClick={() => this.idolRoll()}>Idol Roll</button>
+        </div> : null }
         { this.state.showCampLife ? <div>
         <button onClick={() => this.eventOutcomeRoll(tribe2)}>Event Outcome Roll</button>
         </div> : null }
@@ -1055,7 +1186,7 @@ class App extends Component {
         <Table striped bordered hover size="sm">
           <thead>
           <tr>
-          <th colspan="6">
+          <th colspan="8">
           The Seekers Tribe
           </th>
           </tr>
@@ -1075,6 +1206,9 @@ class App extends Component {
           <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
         </div> : null }
         </h2>
+        { this.state.idolRoll ? <div>
+        <button onClick={() => this.idolRoll()}>Idol Roll</button>
+        </div> : null }
         { this.state.showCampLife ? <div>
         <button onClick={() => this.eventOutcomeRoll(tribe3)}>Event Outcome Roll</button>
         </div> : null }
@@ -1087,7 +1221,7 @@ class App extends Component {
         <Table striped bordered hover size="sm">
           <thead>
           <tr>
-          <th colspan="6">
+          <th colspan="8">
           The Smoke Monsters tribe
           </th>
           </tr>
