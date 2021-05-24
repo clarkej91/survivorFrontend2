@@ -6,6 +6,7 @@ import ChallengeSlider from "./components/slider.js"
 import 'bootstrap/dist/css/bootstrap.min.css';
 import TheProgressBar from "./components/ProgressBar.js"
 import Tribal from "./components/Tribal.js"
+import NavigationBar from "./components/NavigationBar.js"
 import Table from 'react-bootstrap/Table';
 import { StickyContainer, Sticky } from 'react-sticky';
 
@@ -81,6 +82,8 @@ class App extends Component {
     this.updatePlayerScore = this.updatePlayerScore.bind(this);
     this.idolRoll = this.idolRoll.bind(this);
     this.handleIdolChange = this.handleIdolChange.bind(this);
+    this.setTribalToFalse = this.setTribalToFalse.bind(this);
+    this.updateChallengeRatio = this.updateChallengeRatio.bind(this);
   }
 
   componentDidMount() {
@@ -99,6 +102,7 @@ class App extends Component {
         // console.log('From Api')
         const response = data;
         this.setState({response});
+        this.setState({playerOutcome: data})
       });
     });
   }
@@ -174,6 +178,7 @@ class App extends Component {
       const gameData = res.data
       this.setState({roundData});
       this.setState({gameData});
+      // this.setState({challengeRatioNum: res.data[0].challenge_ratio})
       socket.on('GameData', data => {
         const roundData = data[0].round_data;
         const gameData = data
@@ -192,21 +197,34 @@ class App extends Component {
             this.setState({showCampLife: false})
           } else if(this.state.roundData === 75){
             this.setState({showCampLife: true})
+            this.setState({showEventResults: true})
             this.setState({showTribal: false})
             this.setState({showChallengeData: false})
           } else if(this.state.roundData === 25){
+            this.setState({showEventResults: true})
             this.setState({showCampLife: true})
             this.setState({showTribal: false})
             this.setState({showChallengeData: false})
           } else {
             this.setState({showTribal: false})
-            this.setState({showCampLife: false})
+            // this.setState({showCampLife: false})
             this.setState({showChallengeData: false})
             this.setState({showChallengeResults: false });
+            this.setTribalToFalse();
           }
         });
       });
     });
+  }
+
+  setTribalToFalse() {
+    axios.put(`${backendUrl}setTribalToFalse`, {})
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
   }
 
   addLikeness(id, likeness) {
@@ -297,10 +315,12 @@ class App extends Component {
       });
   }
 
-  updatePlayerScore(id, playerScore){
+  updatePlayerScore(name, playerScore){
+    console.log(name,playerScore)
     axios.put(`${backendUrl}updatePlayerScore`, {
-        id: id,
-        playerScore: playerScore
+        name: name,
+        playerScore: playerScore,
+        tribal: true
       })
       .then(response => {
         this.getData();
@@ -330,6 +350,18 @@ class App extends Component {
         tribe1: this.state.tribe1Score,
         tribe2: this.state.tribe2Score,
         tribe3: this.state.tribe3Score
+      })
+      .then(response => {
+        this.getRoundData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
+  updateChallengeRatio(num){
+    axios.put(`${backendUrl}updateChallengeRatio`, {
+        num: num
       })
       .then(response => {
         this.getRoundData();
@@ -387,9 +419,17 @@ class App extends Component {
       } else {
         this.getPlayer(lowestName[0].name);
       }
-      this.setState({playerOutcome: players}, () => {
-        console.log(this.state.playerOutcome)
-      })
+      for(let i = 0; i < players.length; i ++){
+        console.log(players[i])
+        this.updatePlayerScore(players[i].name, players[i].value)
+      }
+      // this.setState({playerOutcome: players}, () => {
+      //   console.log(this.state.playerOutcome)
+      //   for(let i = 0; i < players.length; i ++){
+      //     console.log(players[i])
+      //     this.updatePlayerScore(players[i].name, players[i].value)
+      //   }
+      // })
       this.setState({ showResults: true });
     }, 500)
 
@@ -532,6 +572,7 @@ class App extends Component {
     event.preventDefault();
     this.setState({ showResults: false });
     this.setState({ challengeRatioNum: val})
+    // this.updateChallengeRatio(val);
     setTimeout(() => {
     let tribe1 = []
     let tribe2 = []
@@ -1100,6 +1141,13 @@ class App extends Component {
     })
     return (
       <div className="App">
+      <NavigationBar
+      response={this.state.response}
+      eventRespone={this.state.eventRespone}
+      playerResponse={this.state.playerResponse}
+      tribeRespone={this.state.tribeRespone}
+      challengeResponse={this.state.challengeResponse}
+      />
       <StickyContainer>
       <Sticky>
         {({ style }) => <h4 style={{ ...style, backgroundColor: '#C9C9C9' }}>

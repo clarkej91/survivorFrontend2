@@ -13,13 +13,18 @@ class Tribal extends Component {
         <thead>
         <tr>
         {this.props.playerOutcome.map((data, i) => {
+          console.log(data.name)
+          if(data.tribal === true){
           return <th>{data.name}</th>;
+          }
         })}
         </tr>
         </thead>
         <tbody>
         {this.props.playerOutcome.map((data, i) => {
-          return <th>{data.value}</th>;
+          if(data.tribal === true){
+          return <th>{data.playerscore}</th>;
+          }
         })}
         </tbody>
       </Table>
