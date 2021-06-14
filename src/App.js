@@ -6,6 +6,7 @@ import ChallengeSlider from "./components/slider.js"
 import 'bootstrap/dist/css/bootstrap.min.css';
 import TheProgressBar from "./components/ProgressBar.js"
 import Tribal from "./components/Tribal.js"
+import Actions from "./components/Actions.js"
 import NavigationBar from "./components/NavigationBar.js"
 import Table from 'react-bootstrap/Table';
 import { StickyContainer, Sticky } from 'react-sticky';
@@ -101,8 +102,7 @@ class App extends Component {
       socket.on("FromAPI", data => {
         // console.log('From Api')
         const response = data;
-        this.setState({response});
-        this.setState({playerOutcome: data})
+        this.setState({response}); this.setState({playerOutcome: data});
       });
     });
   }
@@ -321,6 +321,19 @@ class App extends Component {
         name: name,
         playerScore: playerScore,
         tribal: true
+      })
+      .then(response => {
+        this.getData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
+  updateTribeNumber(name, tribeNumber){
+    axios.put(`${backendUrl}updateTribeNumber`, {
+        name: name,
+        tribeNumber: tribeNumber
       })
       .then(response => {
         this.getData();
@@ -830,6 +843,7 @@ class App extends Component {
     const tabeHeaer = [
       {header: "Name"},
       {header: "Tribe"},
+      {header: "Tribe Number"},
       {header: "Influence"},
       {header: "Strength"},
       {header: "Mental"},
@@ -879,6 +893,8 @@ class App extends Component {
           </select>
           <input type="submit" value="Submit" />
           </form>
+          </td>
+          <td>{data.tribe_number}
           </td>
           <td>{data.likeness}
           <div>
@@ -939,6 +955,8 @@ class App extends Component {
           <input type="submit" value="Submit" />
           </form>
           </td>
+          <td>{data.tribe_number}
+          </td>
           <td>{data.likeness}
           <div>
             <button onClick={() => this.addLikeness(data.id, data.likeness)}>+</button>
@@ -997,6 +1015,8 @@ class App extends Component {
           </select>
           <input type="submit" value="Submit" />
           </form>
+          </td>
+          <td>{data.tribe_number}
           </td>
           <td>{data.likeness}
             <div>
@@ -1082,6 +1102,15 @@ class App extends Component {
             onChange={ (event) => {this.handleInputChange(data, event)}}
              />
           </td>
+          <td>
+          <input
+            name="isGoing"
+            type="checkbox"
+            defaultChecked={data.join_game}
+            onChange={ (event) => {this.handleInputChange(data, event)}}
+             />
+          {data.join_game.toString()}
+          </td>
         </tr>
       )
     })
@@ -1166,6 +1195,7 @@ class App extends Component {
           <Tribal
             response={this.state.response}
             playerOutcome={this.state.playerOutcome}
+            showResults={this.state.showResults}
           />
           </div> : null }
             Event Happens to:
@@ -1182,6 +1212,14 @@ class App extends Component {
           </h2>
         </h4>}
       </Sticky>
+<div style={{float: 'left'}}>
+<Actions
+getData={this.getData}
+getPlayer={this.getPlayer}
+response={this.state.response}
+updateTribeNumber={this.updateTribeNumber}
+/>
+</div>
       { this.state.idolRoll ? <div>
       <button onClick={() => this.idolRoll()}>Idol Roll</button>
       </div> : null }
