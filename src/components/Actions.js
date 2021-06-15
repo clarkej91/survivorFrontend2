@@ -13,6 +13,8 @@ medevac = () => {
   })
   let player = Math.floor(Math.random() * players.length - 1) + 1
   this.props.getPlayer(players[player])
+  console.log(players[player])
+  this.props.updateShowData(true);
 }
 
 merge = () => {

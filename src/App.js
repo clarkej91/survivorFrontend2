@@ -56,7 +56,8 @@ class App extends Component {
       showCampLife: false,
       idolRoll: false,
       playerOutcome: [],
-      gameData: []
+      gameData: [],
+      showData: false
     };
     this.getData = this.getData.bind(this);
     this.getPlayer = this.getPlayer.bind(this)
@@ -182,6 +183,7 @@ class App extends Component {
       socket.on('GameData', data => {
         const roundData = data[0].round_data;
         const gameData = data
+        console.log(data[0].showdata);
         this.setState({gameData});
         this.setState({roundData}, () => {
           if(this.state.roundData === 50){
@@ -363,6 +365,19 @@ class App extends Component {
         tribe1: this.state.tribe1Score,
         tribe2: this.state.tribe2Score,
         tribe3: this.state.tribe3Score
+      })
+      .then(response => {
+        this.getRoundData();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  }
+
+  updateShowData = (showData) => {
+    console.log('does this get called', showData)
+    axios.put(`${backendUrl}changeShowData`, {
+        showData: showData
       })
       .then(response => {
         this.getRoundData();
@@ -1214,6 +1229,7 @@ class App extends Component {
       </Sticky>
 <div style={{float: 'left'}}>
 <Actions
+updateShowData={this.updateShowData}
 getData={this.getData}
 getPlayer={this.getPlayer}
 response={this.state.response}
