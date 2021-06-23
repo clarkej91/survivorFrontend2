@@ -10,6 +10,8 @@ import Actions from "./components/Actions.js"
 import NavigationBar from "./components/NavigationBar.js"
 import Table from 'react-bootstrap/Table';
 import { StickyContainer, Sticky } from 'react-sticky';
+import Button from 'react-bootstrap/Button'
+import { matchPath } from 'react-router-dom';
 
 const backendUrl = 'https://survivor-backend2.herokuapp.com/';
 const URL = 'https://survivor-backend2.herokuapp.com/';
@@ -57,7 +59,11 @@ class App extends Component {
       idolRoll: false,
       playerOutcome: [],
       gameData: [],
-      showData: false
+      events: [],
+      showData: true,
+      showHomePage: true,
+      message: "",
+      idolMessage: ""
     };
     this.getData = this.getData.bind(this);
     this.getPlayer = this.getPlayer.bind(this)
@@ -94,6 +100,11 @@ class App extends Component {
     this.getTribe('tribe1');
     this.getEvent(1);
     this.getRoundData();
+    this.getEvents();
+    // this.getMessage();
+    this.sendMessage('true');
+    this.getRatioVal();
+    this.getIdolMessage();
   }
 
   getData() {
@@ -105,6 +116,47 @@ class App extends Component {
         const response = data;
         this.setState({response}); this.setState({playerOutcome: data});
       });
+    });
+  }
+
+  sendMessage = (data) => {
+    socket.emit('sendMessage', data)
+    this.getMessage();
+  }
+
+  getMessage = () => {
+    socket.on("getMessage", (data) => {
+      this.setState({message: data})
+      console.log(data)
+    });
+  }
+
+  sendRatioVal = (data) => {
+    socket.emit('sendRatioVal', data)
+    this.getRatioVal();
+  }
+
+  getRatioVal = () => {
+    socket.on("getRatioVal", (data) => {
+      this.setState({challengeRatioNum: data})
+    });
+  }
+
+  sendIdolMessage = (data) => {
+    socket.emit('sendIdolMessage', data)
+    this.getRatioVal();
+  }
+
+  getIdolMessage = () => {
+    socket.on("getIdolMessage", (data) => {
+      this.setState({idolMessage: data})
+    });
+  }
+
+  getEvents = () => {
+    axios.get(`${backendUrl}events`).then((res) => {
+      const events = res.data;
+      this.setState({events});
     });
   }
 
@@ -177,13 +229,15 @@ class App extends Component {
     axios.get(`${backendUrl}gameData`).then((res) => {
       const roundData = res.data[0].round_data;
       const gameData = res.data
+      const showData = res.data[0].showdata
+      this.setState({showData})
       this.setState({roundData});
       this.setState({gameData});
-      // this.setState({challengeRatioNum: res.data[0].challenge_ratio})
       socket.on('GameData', data => {
         const roundData = data[0].round_data;
-        const gameData = data
-        console.log(data[0].showdata);
+        const gameData = data;
+        const showData = data[0].showdata;
+        this.setState({showData});
         this.setState({gameData});
         this.setState({roundData}, () => {
           if(this.state.roundData === 50){
@@ -404,6 +458,8 @@ class App extends Component {
   }
 
   diceRoll(tribe){
+    // this.updateShowData(false);
+    this.sendMessage('false')
     this.setState({ showResults: false });
     let players = []
     setTimeout(() => {
@@ -460,7 +516,13 @@ class App extends Component {
       // })
       this.setState({ showResults: true });
     }, 500)
-
+    let array = ['voting', 'tally', 'decision', 'true']
+    for (let i = 0; i < array.length; i++) {
+      setTimeout(() => {
+          this.sendMessage(array[i]);
+          console.log(array[i])
+      }, 5000 * i);
+  }
   }
 
   playerRoll(tribe) {
@@ -588,16 +650,21 @@ class App extends Component {
 
   eventOutcomeRoll(tribe) {
     this.setState({idolRoll: false})
+    let eventLength = this.state.events.length
+    console.log(eventLength)
     setTimeout(() => {
-      let randomNum = Math.floor(1 + Math.random() * 48);
+      let randomNum = Math.floor(Math.random() * eventLength) + 1;
       this.setState({ showEventResults: true });
-      this.getEvent(randomNum)
+      console.log(this.state.events[randomNum].id)
+      this.getEvent(this.state.events[randomNum].id)
     }, 500)
     this.playerRoll(tribe)
   }
 
   challengeRatio(val, event) {
     event.preventDefault();
+    // this.updateShowData(false);
+    this.sendMessage('false');
     this.setState({ showResults: false });
     this.setState({ challengeRatioNum: val})
     // this.updateChallengeRatio(val);
@@ -692,6 +759,13 @@ class App extends Component {
     // let rollValue = Math.floor(1 + Math.random() * (20 * ((parseInt(val)) * .01)))
     // console.log(rollValue);
   }, 500)
+  let array = ['battle', 'challenge', 'dig', 'true']
+  for (let i = 0; i < array.length; i++) {
+    setTimeout(() => {
+        this.sendMessage(array[i]);
+        console.log(array[i])
+    }, 5000 * i);
+  }
 }
 
   updateRound(round) {
@@ -767,12 +841,43 @@ class App extends Component {
       });
   }
 
-  idolRoll(){
+  idolRoll(tribe){
     let randomNum = Math.floor(1 + Math.random() * 3);
-    console.log(randomNum)
+    let tribeMember = tribe[Math.floor(Math.random() * tribe.length)];
+    // this.sendIdolMessage('showIdolRes');
+    this.setState({ showResults: true });
+    this.getPlayer(tribeMember.name)
+    console.log(randomNum, tribeMember.idol_count, tribeMember.id)
     if(randomNum === 3){
-      this.updateIdolCount(this.state.playerResponse[0].id, this.state.playerResponse[0].idol_count + 1)
+      let array = ['is searching...', 'found an idol', 'hideIdol']
+      for (let i = 0; i < array.length; i++) {
+        setTimeout(() => {
+          if(array[i] === 'hideIdol'){
+            this.sendIdolMessage('hideIdol')
+          } else {
+            this.sendIdolMessage(`${tribeMember.name} ${array[i]}`);
+          }
+            console.log(array[i])
+        }, 5000 * i);
+      }
+      this.updateIdolCount(tribeMember.id, tribeMember.idol_count + 1)
+    } else {
+      let array = ['is searching...', 'did not find an idol', 'hideIdol']
+      for (let i = 0; i < array.length; i++) {
+        setTimeout(() => {
+          if(array[i] === 'hideIdol'){
+            this.sendIdolMessage('hideIdol')
+          } else {
+            this.sendIdolMessage(`${tribeMember.name} ${array[i]}`);
+          }
+            console.log(array[i])
+        }, 5000 * i);
+      }
+      this.sendIdolMessage(`${tribeMember.name} did not find an idol`)
     }
+    // setTimeout(() => {
+    //   this.sendIdolMessage('hideIdol')
+    // }, 5000)
   }
 
   handleIdolChange(data, event) {
@@ -848,6 +953,11 @@ class App extends Component {
   }
 
   render(){
+    // if(window.location.pathname === '/'){
+    //   console.log('hello world')
+    //   setState({showHomePage: true})
+    // }
+
     let tribe1 = []
     let tribe2 = []
     let tribe3 = []
@@ -1183,9 +1293,24 @@ class App extends Component {
         </div>
       )
     })
+    // const message = this.state.message.map((data, i) => {
+    //   console.log(data);
+    //   return(
+    //     <div key={i}>
+    //     {data}
+    //     </div>
+    //   )
+    // })
     return (
       <div className="App">
+      { this.state.showHomePage ? <div>
       <NavigationBar
+      updateShowData={this.updateShowData}
+      getData={this.getData}
+      getPlayer={this.getPlayer}
+      response={this.state.response}
+      updateTribeNumber={this.updateTribeNumber}
+
       response={this.state.response}
       eventRespone={this.state.eventRespone}
       playerResponse={this.state.playerResponse}
@@ -1200,6 +1325,9 @@ class App extends Component {
           updateRound={this.updateRound}/>
           { this.state.showChallengeData ? <div>
           <ChallengeSlider
+            sendRatioVal={this.sendRatioVal}
+            message={this.state.message}
+            showData={this.state.showData}
             challengeRatioNum={this.state.challengeRatioNum}
             challengeRatio={this.challengeRatio}
             gameData={this.state.gameData}
@@ -1208,11 +1336,17 @@ class App extends Component {
           <h2>
           { this.state.showTribal ? <div>
           <Tribal
+            message={this.state.message}
             response={this.state.response}
             playerOutcome={this.state.playerOutcome}
             showResults={this.state.showResults}
           />
           </div> : null }
+          { this.state.idolMessage !== 'hideIdol' && <div>
+          {this.state.idolMessage}
+          </div> }
+          {this.state.message === 'true' &&
+            <div>
             Event Happens to:
           { this.state.showResults ? <div>
             {playerEvent}
@@ -1221,23 +1355,16 @@ class App extends Component {
             {playerEvent}
             <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
           </div> : null }
+          </div>
+          }
           { this.state.showEventResults ? <div>
             <h2>{eventOutcome}</h2>
           </div> : null }
           </h2>
         </h4>}
       </Sticky>
-<div style={{float: 'left'}}>
-<Actions
-updateShowData={this.updateShowData}
-getData={this.getData}
-getPlayer={this.getPlayer}
-response={this.state.response}
-updateTribeNumber={this.updateTribeNumber}
-/>
-</div>
+    <button onClick={() => this.idolRoll(tribe1)}>Idol Roll</button>
       { this.state.idolRoll ? <div>
-      <button onClick={() => this.idolRoll()}>Idol Roll</button>
       </div> : null }
       { this.state.showCampLife ? <div>
       <button onClick={() => this.eventOutcomeRoll(tribe1)}>Event Outcome Roll</button>
@@ -1254,7 +1381,7 @@ updateTribeNumber={this.updateTribeNumber}
           <thead>
           <tr>
           <th colspan="8">
-          Live Together Die Alone Tribe
+          Oceanic
           </th>
           </tr>
           <tr>
@@ -1267,14 +1394,8 @@ updateTribeNumber={this.updateTribeNumber}
           {tribe1Array}
           </tbody>
         </Table>
-        <h2>
-        { this.state.tied ? <div>
-          {playerEvent}
-          <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
-        </div> : null }
-        </h2>
+        <button onClick={() => this.idolRoll(tribe2)}>Idol Roll</button>
         { this.state.idolRoll ? <div>
-        <button onClick={() => this.idolRoll()}>Idol Roll</button>
         </div> : null }
         { this.state.showCampLife ? <div>
         <button onClick={() => this.eventOutcomeRoll(tribe2)}>Event Outcome Roll</button>
@@ -1289,7 +1410,7 @@ updateTribeNumber={this.updateTribeNumber}
           <thead>
           <tr>
           <th colspan="8">
-          The Seekers Tribe
+          Ajira
           </th>
           </tr>
           <tr>
@@ -1302,14 +1423,8 @@ updateTribeNumber={this.updateTribeNumber}
           {tribe2Array}
           </tbody>
         </Table>
-        <h2>
-        { this.state.tied ? <div>
-          {playerEvent}
-          <button onClick={() => this.playerRoll(this.state.playerResponse)}>Draw Rocks</button>
-        </div> : null }
-        </h2>
+        <button onClick={() => this.idolRoll(tribe3)}>Idol Roll</button>
         { this.state.idolRoll ? <div>
-        <button onClick={() => this.idolRoll()}>Idol Roll</button>
         </div> : null }
         { this.state.showCampLife ? <div>
         <button onClick={() => this.eventOutcomeRoll(tribe3)}>Event Outcome Roll</button>
@@ -1372,6 +1487,7 @@ updateTribeNumber={this.updateTribeNumber}
           <button onClick={() => this.playerRoll(jury)}>Player Roll</button>
         </div>
       </StickyContainer>
+      </div> : null }
       </div>
     );
   }

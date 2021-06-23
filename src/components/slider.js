@@ -11,6 +11,7 @@ import { render } from "react-dom";
 import "./style.css";
 import Button from 'react-bootstrap/Button';
 import Table from 'react-bootstrap/Table';
+import Spinner from 'react-bootstrap/Spinner';
 
 class ChallengeSlider extends Component {
   render() {
@@ -71,6 +72,7 @@ class ChallengeSlider extends Component {
       const [parentVal, setParentVal] = useState(this.props.challengeRatioNum);
       const sliderValueChanged = useCallback(val => {
         console.log("NEW VALUE", val);
+        this.props.sendRatioVal(val)
         setParentVal(val);
       });
 
@@ -89,24 +91,46 @@ class ChallengeSlider extends Component {
       return (
         <div>
           <RangeSlider {...sliderProps} classes="additional-css-classes" />
-          <Table striped bordered hover size="sm">
-            <thead>
-            <tr>
-              <th>
-              LTDA
-              </th>
-              <th>
-              Seekers
-              </th>
-              <th>
-              Smoke Monsters
-              </th>
-            </tr>
-            </thead>
-            <tbody>
-            {gameData}
-            </tbody>
-          </Table>
+          {this.props.message === 'battle' &&
+            <div>
+            Battling...
+            <Spinner animation="border" />
+            </div>
+          }
+          {this.props.message === 'challenge' &&
+            <div>
+            Jeff - "This challenge is on"
+            <Spinner animation="border" />
+            </div>
+          }
+          {this.props.message === 'dig' &&
+            <div>
+            Jeff - "You gotta DIG John Locke"
+            <Spinner animation="border" />
+            </div>
+          }
+          {this.props.message === 'true' &&
+            <div>
+            <Table striped bordered hover size="sm">
+              <thead>
+              <tr>
+                <th>
+                Oceanic
+                </th>
+                <th>
+                Ajira
+                </th>
+                <th>
+                Smoke Monsters
+                </th>
+              </tr>
+              </thead>
+              <tbody>
+              {gameData}
+              </tbody>
+            </Table>
+            </div>
+          }
         </div>
       );
     };
