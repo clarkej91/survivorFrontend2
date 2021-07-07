@@ -3,11 +3,54 @@ import ProgressBar from 'react-bootstrap/ProgressBar'
 import Button from 'react-bootstrap/Button';
 
 class TheProgressBar extends Component {
+
+  componentDidMount = () => {
+    this.props.getRoundMessage();
+  }
+  currentPos = (data) => {
+    switch (this.props.roundDataMes) {
+      case 0:
+        if(data === 'Next'){
+          this.props.sendRoundMessage(this.props.roundDataMes + 25)
+        } else {
+          this.props.sendRoundMessage(100)
+        }
+        break;
+      case 25:
+        if(data === 'Next'){
+          this.props.sendRoundMessage(this.props.roundDataMes + 25)
+        } else {
+          this.props.sendRoundMessage(this.props.roundDataMes - 25)
+        }
+        break;
+      case 50:
+        if(data === 'Next'){
+          this.props.sendRoundMessage(this.props.roundDataMes + 25)
+        } else {
+          this.props.sendRoundMessage(this.props.roundDataMes - 25)
+        }
+        break;
+      case 75:
+        if(data === 'Next'){
+          this.props.sendRoundMessage(this.props.roundDataMes + 25)
+        } else {
+          this.props.sendRoundMessage(this.props.roundDataMes - 25)
+        }
+        break;
+      case 100:
+        if(data === 'Next'){
+          this.props.sendRoundMessage(0)
+        } else {
+          this.props.sendRoundMessage(this.props.roundDataMes - 25)
+        }
+        break;
+    }
+  }
   render() {
     let round = '';
     let prevRound = '';
     let currentRound = '';
-    switch (this.props.roundData) {
+    switch (this.props.roundDataMes) {
       case 0:
         currentRound = 'Begin Round';
         round = 'Go To Camp Life Pre Challenge';
@@ -36,9 +79,9 @@ class TheProgressBar extends Component {
     }
     return (
       <div>
-        <ProgressBar style={{ height: '40px' }} animated now={this.props.roundData} label={currentRound}/>
-        <Button variant="outline-dark" onClick={() => this.props.updateRound('Back')}>{prevRound}</Button>
-        <Button variant="outline-dark" onClick={() => this.props.updateRound('Next')}>{round}</Button>
+        <ProgressBar style={{ height: '40px' }} animated now={this.props.roundDataMes} label={currentRound}/>
+        <Button variant="outline-dark" onClick={() => this.currentPos('Back')}>{prevRound}</Button>
+        <Button variant="outline-dark" onClick={() => this.currentPos('Next')}>{round}</Button>
       </div>
     );
   }

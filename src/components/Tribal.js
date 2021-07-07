@@ -3,8 +3,19 @@ import Table from 'react-bootstrap/Table';
 import Spinner from 'react-bootstrap/Spinner';
 
 class Tribal extends Component {
+  constructor( props ) {
+  super( props );
+  this.state = {
+    voteOutcome: [],
 
+  }
+}
+
+  voteFunc = () => {
+
+  }
   render() {
+    console.log(this.props.playerOutcome)
     // const response = this.props.response.map((data, i) => {
     //   console.log(data);
     // })

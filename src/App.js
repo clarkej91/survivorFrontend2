@@ -6,7 +6,9 @@ import ChallengeSlider from "./components/slider.js"
 import 'bootstrap/dist/css/bootstrap.min.css';
 import TheProgressBar from "./components/ProgressBar.js"
 import Tribal from "./components/Tribal.js"
+import TribalCouncil from "./components/TribalCouncil.js"
 import Actions from "./components/Actions.js"
+import Home from "./components/Home.js"
 import NavigationBar from "./components/NavigationBar.js"
 import Table from 'react-bootstrap/Table';
 import { StickyContainer, Sticky } from 'react-sticky';
@@ -63,7 +65,14 @@ class App extends Component {
       showData: true,
       showHomePage: true,
       message: "",
-      idolMessage: ""
+      idolMessage: "",
+      roundDataMes: 0,
+      tribalMessage: [],
+      tribalVote: [],
+      showtribalVote: true,
+      showAllTribalVote: false,
+      revealVotes: false,
+      revote: []
     };
     this.getData = this.getData.bind(this);
     this.getPlayer = this.getPlayer.bind(this)
@@ -105,6 +114,13 @@ class App extends Component {
     this.sendMessage('true');
     this.getRatioVal();
     this.getIdolMessage();
+    // this.sendRoundMessage(0);
+    this.getRoundMessage();
+    this.readVotes();
+    this.sendTribalVotes([]);
+    this.getRevealAllVotes();
+    // this.getReadVotes();
+    // this.revealAllVotes(true)
   }
 
   getData() {
@@ -127,7 +143,6 @@ class App extends Component {
   getMessage = () => {
     socket.on("getMessage", (data) => {
       this.setState({message: data})
-      console.log(data)
     });
   }
 
@@ -144,12 +159,112 @@ class App extends Component {
 
   sendIdolMessage = (data) => {
     socket.emit('sendIdolMessage', data)
-    this.getRatioVal();
+    this.getIdolMessage();
   }
 
   getIdolMessage = () => {
     socket.on("getIdolMessage", (data) => {
       this.setState({idolMessage: data})
+    });
+  }
+
+  sendRoundMessage = (data) => {
+    socket.emit('sendRoundMessage', data)
+    this.getRoundMessage();
+  }
+
+  getRoundMessage = () => {
+    socket.on("getRoundMessage", (data) => {
+      this.setState({roundDataMes: data})
+      const roundData = data;
+      this.setState({roundData}, () => {
+        if(this.state.roundData === 50){
+          // this.setState({revealVotes: false})
+          this.setState({showChallengeData: true})
+          this.setState({showTribal: false})
+          this.setState({showCampLife: false})
+          this.setState({showEventResults: false})
+        } else if(this.state.roundData === 100){
+          this.setState({idolRoll: false})
+          this.setState({showEventResults: false})
+          this.setState({showTribal: true})
+          this.setState({showChallengeData: false})
+          this.setState({showCampLife: false})
+        } else if(this.state.roundData === 75){
+          // this.setState({revealVotes: false})
+          this.setState({showCampLife: true})
+          this.setState({showEventResults: true})
+          this.setState({showTribal: false})
+          this.setState({showChallengeData: false})
+        } else if(this.state.roundData === 25){
+          // this.setState({revealVotes: false})
+          this.setState({showEventResults: true})
+          this.setState({showCampLife: true})
+          this.setState({showTribal: false})
+          this.setState({showChallengeData: false})
+        } else {
+          // this.setState({revealVotes: false})
+          this.setState({showTribal: false})
+          // this.setState({showCampLife: false})
+          this.setState({showChallengeData: false})
+          this.setState({showChallengeResults: false });
+          this.sendTribalVotes([]);
+          this.setTribalToFalse();
+        }
+      });
+    });
+  }
+
+  sendTribalVotes = (data) => {
+    socket.emit('sendTribalVotes', data)
+    this.getTribalVotes();
+  }
+
+  getTribalVotes = () => {
+    socket.on("getTribalVotes", (data) => {
+      this.setState({showAllTribalVote: false})
+      console.log(this.state.showAllTribalVote)
+      this.setState({tribalMessage: data})
+      setTimeout(() => {
+        this.setState({showAllTribalVote: true})
+      }, 5000)
+    });
+  }
+
+  readVotes = (data) => {
+    socket.emit('sendVote', data)
+    this.getReadVotes();
+    // this.setState({showtribalVote: false})
+      // socket.on("getVote", (data) => {
+      //   this.setState({showtribalVote: false})
+      //   setTimeout(() => {
+      //     console.log(this.state.showtribalVote)
+      //     this.setState({tribalVote: data})
+      //     this.setState({showtribalVote: true})
+      //   }, 1000)
+      // });
+  }
+
+  getReadVotes = () => {
+    socket.on("getVote", (data) => {
+      this.setState({showtribalVote: false})
+      setTimeout(() => {
+        console.log(this.state.showtribalVote)
+        this.setState({tribalVote: data})
+        this.setState({showtribalVote: true})
+      }, 1000)
+    });
+  }
+
+  revealAllVotes = (data) => {
+    socket.emit('sendRevealVote', data)
+    this.getRevealAllVotes();
+  }
+
+  getRevealAllVotes = () => {
+    socket.on('getRevealVote', (data) => {
+      console.log(data)
+      this.setState({revealVotes: data})
     });
   }
 
@@ -227,48 +342,48 @@ class App extends Component {
 
   getRoundData() {
     axios.get(`${backendUrl}gameData`).then((res) => {
-      const roundData = res.data[0].round_data;
+      // const roundData = res.data[0].round_data;
       const gameData = res.data
-      const showData = res.data[0].showdata
-      this.setState({showData})
-      this.setState({roundData});
+      // const showData = res.data[0].showdata
+      // this.setState({showData})
+      // this.setState({roundData});
       this.setState({gameData});
       socket.on('GameData', data => {
-        const roundData = data[0].round_data;
+        // const roundData = data[0].round_data;
         const gameData = data;
-        const showData = data[0].showdata;
-        this.setState({showData});
+        // const showData = data[0].showdata;
+        // this.setState({showData});
         this.setState({gameData});
-        this.setState({roundData}, () => {
-          if(this.state.roundData === 50){
-            this.setState({showChallengeData: true})
-            this.setState({showTribal: false})
-            this.setState({showCampLife: false})
-            this.setState({showEventResults: false})
-          } else if(this.state.roundData === 100){
-            this.setState({idolRoll: false})
-            this.setState({showEventResults: false})
-            this.setState({showTribal: true})
-            this.setState({showChallengeData: false})
-            this.setState({showCampLife: false})
-          } else if(this.state.roundData === 75){
-            this.setState({showCampLife: true})
-            this.setState({showEventResults: true})
-            this.setState({showTribal: false})
-            this.setState({showChallengeData: false})
-          } else if(this.state.roundData === 25){
-            this.setState({showEventResults: true})
-            this.setState({showCampLife: true})
-            this.setState({showTribal: false})
-            this.setState({showChallengeData: false})
-          } else {
-            this.setState({showTribal: false})
-            // this.setState({showCampLife: false})
-            this.setState({showChallengeData: false})
-            this.setState({showChallengeResults: false });
-            this.setTribalToFalse();
-          }
-        });
+        // this.setState({roundData}, () => {
+          // if(this.state.roundData === 50){
+          //   this.setState({showChallengeData: true})
+          //   this.setState({showTribal: false})
+          //   this.setState({showCampLife: false})
+          //   this.setState({showEventResults: false})
+          // } else if(this.state.roundData === 100){
+          //   this.setState({idolRoll: false})
+          //   this.setState({showEventResults: false})
+          //   this.setState({showTribal: true})
+          //   this.setState({showChallengeData: false})
+          //   this.setState({showCampLife: false})
+          // } else if(this.state.roundData === 75){
+          //   this.setState({showCampLife: true})
+          //   this.setState({showEventResults: true})
+          //   this.setState({showTribal: false})
+          //   this.setState({showChallengeData: false})
+          // } else if(this.state.roundData === 25){
+          //   this.setState({showEventResults: true})
+          //   this.setState({showCampLife: true})
+          //   this.setState({showTribal: false})
+          //   this.setState({showChallengeData: false})
+          // } else {
+          //   this.setState({showTribal: false})
+          //   // this.setState({showCampLife: false})
+          //   this.setState({showChallengeData: false})
+          //   this.setState({showChallengeResults: false });
+          //   this.setTribalToFalse();
+          // }
+        // });
       });
     });
   }
@@ -454,6 +569,7 @@ class App extends Component {
   }
 
   handleChange(event) {
+    event.preventDefault()
     this.setState({value: event.target.value});
   }
 
@@ -654,8 +770,10 @@ class App extends Component {
     console.log(eventLength)
     setTimeout(() => {
       let randomNum = Math.floor(Math.random() * eventLength) + 1;
+      console.log(this.state.events[randomNum])
       this.setState({ showEventResults: true });
       console.log(this.state.events[randomNum].id)
+      //can change to not hit DB
       this.getEvent(this.state.events[randomNum].id)
     }, 500)
     this.playerRoll(tribe)
@@ -768,6 +886,7 @@ class App extends Component {
   }
 }
 
+//might become unused
   updateRound(round) {
     if(round === 'Next'){
       let num = this.state.roundData + 25
@@ -952,12 +1071,20 @@ class App extends Component {
     }
   }
 
-  render(){
-    // if(window.location.pathname === '/'){
-    //   console.log('hello world')
-    //   setState({showHomePage: true})
-    // }
+  onSelectedRow = (data, clickEvent) => {
+    if(this.state.revote.includes(data)){
+      let index = this.state.revote.indexOf(data)
+      this.setState(prevState => ({
+        revote: prevState.revote.filter((data, itemIndex) => itemIndex != index)
+      }))
+    } else {
+      this.setState( prevState => ({
+        revote: [...prevState.revote, data]
+      }))
+    }
+  }
 
+  render(){
     let tribe1 = []
     let tribe2 = []
     let tribe3 = []
@@ -965,17 +1092,6 @@ class App extends Component {
     let jury = []
     let selectOptions = ['both', 'physical', 'mental']
     let selected = []
-    const tabeHeaer = [
-      {header: "Name"},
-      {header: "Tribe"},
-      {header: "Tribe Number"},
-      {header: "Influence"},
-      {header: "Strength"},
-      {header: "Mental"},
-      {header: "Join game"},
-      {header: "Use Idol"},
-      {header: "Idol Count"},
-    ]
 
     const tribeSort = this.state.response.map((data, i) => {
         if(data.tribe === 'jury'){
@@ -1005,7 +1121,7 @@ class App extends Component {
       let tribe1Selected = []
       return(
         <tr key={data.id}>
-          <td>{data.name}</td>
+          <td onClick={this.onSelectedRow.bind(this, data)}>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
@@ -1018,8 +1134,6 @@ class App extends Component {
           </select>
           <input type="submit" value="Submit" />
           </form>
-          </td>
-          <td>{data.tribe_number}
           </td>
           <td>{data.likeness}
           <div>
@@ -1066,7 +1180,7 @@ class App extends Component {
     const tribe2Array = tribe2.map((data, i) => {
       return(
         <tr key={data.id}>
-          <td>{data.name}</td>
+          <td onClick={this.onSelectedRow.bind(this, data)}>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
@@ -1079,8 +1193,6 @@ class App extends Component {
           </select>
           <input type="submit" value="Submit" />
           </form>
-          </td>
-          <td>{data.tribe_number}
           </td>
           <td>{data.likeness}
           <div>
@@ -1127,7 +1239,7 @@ class App extends Component {
     const tribe3Array = tribe3.map((data, i) => {
       return(
         <tr key={data.id}>
-          <td>{data.name}</td>
+          <td onClick={this.onSelectedRow.bind(this, data)}>{data.name}</td>
           <td>
           <form onSubmit={this.updateTribe}>
           <select
@@ -1140,8 +1252,6 @@ class App extends Component {
           </select>
           <input type="submit" value="Submit" />
           </form>
-          </td>
-          <td>{data.tribe_number}
           </td>
           <td>{data.likeness}
             <div>
@@ -1293,34 +1403,15 @@ class App extends Component {
         </div>
       )
     })
-    // const message = this.state.message.map((data, i) => {
-    //   console.log(data);
-    //   return(
-    //     <div key={i}>
-    //     {data}
-    //     </div>
-    //   )
-    // })
     return (
       <div className="App">
-      { this.state.showHomePage ? <div>
-      <NavigationBar
-      updateShowData={this.updateShowData}
-      getData={this.getData}
-      getPlayer={this.getPlayer}
-      response={this.state.response}
-      updateTribeNumber={this.updateTribeNumber}
-
-      response={this.state.response}
-      eventRespone={this.state.eventRespone}
-      playerResponse={this.state.playerResponse}
-      tribeRespone={this.state.tribeRespone}
-      challengeResponse={this.state.challengeResponse}
-      />
       <StickyContainer>
       <Sticky>
         {({ style }) => <h4 style={{ ...style, backgroundColor: '#C9C9C9' }}>
         <TheProgressBar
+          getRoundMessage={this.getRoundMessage}
+          sendRoundMessage={this.sendRoundMessage}
+          roundDataMes={this.state.roundDataMes}
           roundData={this.state.roundData}
           updateRound={this.updateRound}/>
           { this.state.showChallengeData ? <div>
@@ -1335,16 +1426,27 @@ class App extends Component {
           </div> : null }
           <h2>
           { this.state.showTribal ? <div>
-          <Tribal
-            message={this.state.message}
-            response={this.state.response}
-            playerOutcome={this.state.playerOutcome}
-            showResults={this.state.showResults}
-          />
+            <TribalCouncil
+              revote={this.state.revote}
+              revealAllVotes={this.revealAllVotes}
+              revealVotes={this.state.revealVotes}
+              showAllTribalVote={this.state.showAllTribalVote}
+              showtribalVote={this.state.showtribalVote}
+              tribalVote={this.state.tribalVote}
+              readVotes={this.readVotes}
+              tribe1={{tribe1}}
+              tribe2={{tribe2}}
+              tribe3={{tribe3}}
+              sendTribalVotes={this.sendTribalVotes}
+              tribalMessage={this.state.tribalMessage}
+              response={this.state.response}
+              onSelectedRow={this.onSelectedRow}
+            />
           </div> : null }
           { this.state.idolMessage !== 'hideIdol' && <div>
           {this.state.idolMessage}
           </div> }
+          <hr style={{border: "1px solid black"}}/>
           {this.state.message === 'true' &&
             <div>
             Event Happens to:
@@ -1363,131 +1465,42 @@ class App extends Component {
           </h2>
         </h4>}
       </Sticky>
-    <button onClick={() => this.idolRoll(tribe1)}>Idol Roll</button>
-      { this.state.idolRoll ? <div>
-      </div> : null }
-      { this.state.showCampLife ? <div>
-      <button onClick={() => this.eventOutcomeRoll(tribe1)}>Event Outcome Roll</button>
-      </div> : null }
-      { this.state.showTribal ? <div>
-      <button onClick={() => this.diceRoll(tribe1)}>Tribal Roll</button>
-      </div> : null }
-        <div>
-          <button
-          onClick={() => this.playerRoll(tribe1)}
-        >Player Roll</button>
-        </div>
-        <Table striped bordered hover size="sm">
-          <thead>
-          <tr>
-          <th colspan="8">
-          Oceanic
-          </th>
-          </tr>
-          <tr>
-          {tabeHeaer.map(data => {
-            return <th>{data.header}</th>;
-          })}
-          </tr>
-          </thead>
-          <tbody>
-          {tribe1Array}
-          </tbody>
-        </Table>
-        <button onClick={() => this.idolRoll(tribe2)}>Idol Roll</button>
-        { this.state.idolRoll ? <div>
-        </div> : null }
-        { this.state.showCampLife ? <div>
-        <button onClick={() => this.eventOutcomeRoll(tribe2)}>Event Outcome Roll</button>
-        </div> : null }
-        { this.state.showTribal ? <div>
-        <button onClick={() => this.diceRoll(tribe2)}>Tribal Roll</button>
-        </div> : null }
-          <div>
-            <button onClick={() => this.playerRoll(tribe2)}>Player Roll</button>
-          </div>
-        <Table striped bordered hover size="sm">
-          <thead>
-          <tr>
-          <th colspan="8">
-          Ajira
-          </th>
-          </tr>
-          <tr>
-          {tabeHeaer.map(data => {
-            return <th>{data.header}</th>;
-          })}
-          </tr>
-          </thead>
-          <tbody>
-          {tribe2Array}
-          </tbody>
-        </Table>
-        <button onClick={() => this.idolRoll(tribe3)}>Idol Roll</button>
-        { this.state.idolRoll ? <div>
-        </div> : null }
-        { this.state.showCampLife ? <div>
-        <button onClick={() => this.eventOutcomeRoll(tribe3)}>Event Outcome Roll</button>
-        </div> : null }
-        { this.state.showTribal ? <div>
-        <button onClick={() => this.diceRoll(tribe3)}>Tribal Roll</button>
-        </div> : null }
-          <div>
-            <button onClick={() => this.playerRoll(tribe3)}>Player Roll</button>
-          </div>
-        <Table striped bordered hover size="sm">
-          <thead>
-          <tr>
-          <th colspan="8">
-          The Smoke Monsters tribe
-          </th>
-          </tr>
-          <tr>
-          {tabeHeaer.map(data => {
-            return <th>{data.header}</th>;
-          })}
-          </tr>
-          </thead>
-          <tbody>
-          {tribe3Array}
-          </tbody>
-        </Table>
-        <h2>Voted out</h2>
-        <Table striped bordered hover size="sm">
-          <thead>
-          <tr>
-          {tabeHeaer.map(data => {
-            return <th>{data.header}</th>;
-          })}
-          </tr>
-          </thead>
-          <tbody>
-          {noneArray}
-          </tbody>
-        </Table>
-        <div>
-          <button onClick={() => this.diceRoll(none)}>Tribal Roll</button>
-          <button onClick={() => this.playerRoll(none)}>Player Roll</button>
-        </div>
-        <h2>Jury</h2>
-        <Table striped bordered hover size="sm">
-          <thead>
-          <tr>
-          {tabeHeaer.map(data => {
-            return <th>{data.header}</th>;
-          })}
-          </tr>
-          </thead>
-          <tbody>
-          {juryArray}
-          </tbody>
-        </Table>
-        <div>
-          <button onClick={() => this.diceRoll(jury)}>Tribal Roll</button>
-          <button onClick={() => this.playerRoll(jury)}>Player Roll</button>
-        </div>
+      <NavigationBar
+      updateShowData={this.updateShowData}
+      getData={this.getData}
+      getPlayer={this.getPlayer}
+      response={this.state.response}
+      updateTribeNumber={this.updateTribeNumber}
+
+      response={this.state.response}
+      eventRespone={this.state.eventRespone}
+      playerResponse={this.state.playerResponse}
+      tribeRespone={this.state.tribeRespone}
+      challengeResponse={this.state.challengeResponse}
+
+      addLikeness={this.addLikeness}
+      subtractLikeness={this.subtractLikeness}
+      addStrength={this.addStrength}
+      subtractStrength={this.subtractStrength}
+      addWit={this.addWit}
+      subtractWit={this.subtractWit}
+      handleInputChange={this.handleInputChange}
+      handleIdolChange={this.handleIdolChange}
+      onSelectedRow={this.onSelectedRow}
+      updateChallenge={this.updateChallenge}
+      playerRoll={this.playerRoll}
+      diceRoll={this.diceRoll}
+      eventOutcomeRoll={this.eventOutcomeRoll}
+      idolRoll={this.idolRoll}
+      idolRollState={this.state.idolRoll}
+      showCampLife={this.state.showCampLife}
+      showTribal={this.state.showTribal}
+      updateTribe={this.state.updateTribe}
+      handleChange={this.handleChange}
+      value={this.state.value}
+      getData={this.getData}
+      />
       </StickyContainer>
-      </div> : null }
       </div>
     );
   }

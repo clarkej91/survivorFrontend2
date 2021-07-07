@@ -64,20 +64,6 @@ class Events extends Component {
   render() {
     return (
       <div>
-      <Accordion>
-        <Card>
-          <Card.Header>
-            <Accordion.Toggle as={Button} variant="link" eventKey="0">
-              Click For Events
-            </Accordion.Toggle>
-          </Card.Header>
-          <Accordion.Collapse eventKey="0">
-            <Card.Body>
-            <Accordion>
-              <Card>
-                <Card.Header>
-                  <Accordion.Toggle as={Button} variant="link" eventKey="0">
-                    Click To Add Events
                     <div>
                     <form onSubmit={this.handleSubmit}>
                       <label>
@@ -90,14 +76,6 @@ class Events extends Component {
                       <input type="submit" value="Submit" />
                     </form>
                     </div>
-                  </Accordion.Toggle>
-                </Card.Header>
-                <Accordion.Collapse eventKey="0">
-                  <Card.Body>
-                  </Card.Body>
-                </Accordion.Collapse>
-              </Card>
-            </Accordion>
             <Table striped bordered hover size="sm">
               <thead>
               <tr>
@@ -108,13 +86,12 @@ class Events extends Component {
               {this.state.response.map((data, i) => {
                 return <tr>{data.events}<button onClick={() => this.deleteEvent(data.id)}>Delete</button>
                 </tr>;
+                <tr>
+                <button onClick={() => this.deleteEvent(data.id)}>Delete</button>
+                </tr>
               })}
               </tbody>
             </Table>
-            </Card.Body>
-          </Accordion.Collapse>
-        </Card>
-      </Accordion>
       </div>
     );
   }
