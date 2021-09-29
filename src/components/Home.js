@@ -3,8 +3,10 @@ import Table from 'react-bootstrap/Table';
 import axios from 'axios'
 
 
-const backendUrl = 'http://localhost:5000/';
-const URL = 'http://localhost:5000/';
+// const backendUrl = 'http://localhost:5000/';
+// const URL = 'http://localhost:5000/';
+const backendUrl = 'https://survivor-backend2.herokuapp.com/';
+const URL = 'https://survivor-backend2.herokuapp.com/';
 
 class Home extends Component {
   constructor( props ) {
@@ -26,6 +28,7 @@ class Home extends Component {
   }
 
   updateTribe = (event) => {
+    console.log('hello world', event)
     axios.put(`${backendUrl}updateTribe`, {
         id: [parseInt(this.state.value.split(',')[1])],
         tribe: this.state.value.split(',')[0]
@@ -147,9 +150,9 @@ class Home extends Component {
         <tr key={data.id}>
           <td onClick={this.props.onSelectedRow.bind(this, data)}>{data.name}</td>
           <td>
-          <form onSubmit={this.props.updateTribe}>
+          <form onSubmit={this.updateTribe}>
           <select
-            defaultValue={[data.tribe, data.id]} onChange={this.props.handleChange}>
+            defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
           <option value={['tribe1', data.id]}>LTDA</option>
           <option value={['tribe2', data.id]}>Seekers</option>
           <option value={['tribe3', data.id]}>Smoke Monster</option>
@@ -206,9 +209,9 @@ class Home extends Component {
         <tr key={data.id}>
           <td onClick={this.props.onSelectedRow.bind(this, data)}>{data.name}</td>
           <td>
-          <form onSubmit={this.props.updateTribe}>
+          <form onSubmit={this.updateTribe}>
           <select
-            defaultValue={[data.tribe, data.id]} onChange={this.props.handleChange}>
+            defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
           <option value={['tribe1', data.id]}>LTDA</option>
           <option value={['tribe2', data.id]}>Seekers</option>
           <option value={['tribe3', data.id]}>Smoke Monsters</option>
@@ -265,9 +268,9 @@ class Home extends Component {
         <tr key={data.id}>
           <td>{data.name}</td>
           <td>
-          <form onSubmit={this.props.updateTribe}>
+          <form onSubmit={this.updateTribe}>
           <select
-            defaultValue={[data.tribe, data.id]} onChange={this.props.handleChange}>
+            defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
           <option value={['tribe1', data.id]}>LTDA</option>
           <option value={['tribe2', data.id]}>Seekers</option>
           <option value={['tribe3', data.id]}>Smoke Monsters</option>
@@ -319,9 +322,9 @@ class Home extends Component {
         <tr key={data.id}>
           <td>{data.name}</td>
           <td>
-          <form onSubmit={this.props.updateTribe}>
+          <form onSubmit={this.updateTribe}>
           <select
-            defaultValue={[data.tribe, data.id]} onChange={this.props.handleChange}>
+            defaultValue={[data.tribe, data.id]} onChange={this.handleChange}>
           <option value={['tribe1', data.id]}>LTDA</option>
           <option value={['tribe2', data.id]}>Seekers</option>
           <option value={['tribe3', data.id]}>Smoke Monsters</option>

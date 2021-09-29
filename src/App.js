@@ -107,7 +107,7 @@ class App extends Component {
     this.getData();
     this.getPlayer('John Locke');
     this.getTribe('tribe1');
-    this.getEvent(1);
+    // this.getEvent();
     this.getRoundData();
     this.getEvents();
     // this.getMessage();
@@ -276,6 +276,7 @@ class App extends Component {
   }
 
   getEvent(id) {
+    console.log(id);
     axios.put(`${backendUrl}getEvent`, {
         id: id
       })
@@ -515,6 +516,8 @@ class App extends Component {
   }
 
   updateTribe(event) {
+    console.log('hello world')
+    // console.log(event);
     axios.put(`${backendUrl}updateTribe`, {
         id: [parseInt(this.state.value.split(',')[1])],
         tribe: this.state.value.split(',')[0]
@@ -1375,6 +1378,7 @@ class App extends Component {
       )
     })
     const eventOutcome = this.state.eventRespone.map((data, i) => {
+      console.log(data);
       return(
         <div key={data.id}>
         {data.events}
